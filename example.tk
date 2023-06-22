@@ -1,0 +1,10 @@
+[while]                       WHILE
+[for]                         FOR
+[(]                           LPAR
+[)]                           RPAR
+[{a-zA-Z}({a-zA-Z}|{0-9})*]   IDENT
+
+# Ignore Whitespace.
+[ \t\n\r]                     SKIP
+
+# [, ], {, }, -, *, (, ), EXP
