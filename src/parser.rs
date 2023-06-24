@@ -259,33 +259,33 @@ mod tests {
     }
 
     #[test]
-    fn find_valid_invalid() {
+    fn test_parser() {
         // figure out why I need to_owned() here.
         let in_path = "./test_data/parser/input";
         let out_path = "./test_data/parser/output";
         if let Ok(entries) = fs::read_dir(in_path) {
             for entry in entries {
-                if let Ok(entry) = entry {
-                    let file_name = entry.file_name();
-                    let tr = TokenReader::new(
-                        format!("{}/{:?}", in_path, file_name)
-                    );
-
-                    let ans= fs::read_to_string(
-                        format!("{}/{:?}", out_path, file_name)
+                if entry.is_err() { panic!("Invalid Directory"); }
+                let os_str = entry.unwrap().file_name();
+                let file_name = os_str.to_str().unwrap();
+                let ident = file_name.split("_").next().expect("Filename should have non-zero length.");
+                match ident {
+                    "right" | "wrong" => assert!(
+                        valid_invalid(
+                            format!("{}/{:?}", in_path, file_name),
+                            ident
                         )
-                        .unwrap()
-                        .chars()
-                        .nth(0)
-                        .expect("Shouldn't Be Empty!");
-                    let mut parser = Parser::new(tr).expect("Invalid Token Stream");
-                    let matches = parser.parse();
-                    assert!(matches.is_err() == (ans == 'F'));
+                    ),
+                    _ => ()
                 }
             }
-        } else {
-            println!("Failed to read directory");
         }
-        assert_eq!(4, 4);
+    }
+
+    fn valid_invalid(path: String, ans: &str) -> bool {
+        let tr = TokenReader::new(path);
+        let mut parser = Parser::new(tr).expect("Invalid Token Stream");
+        let matches = parser.parse();
+        return !matches.is_err() == ("right" == ans);
     }
 }
