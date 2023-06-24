@@ -1,4 +1,4 @@
-use crate::lexer::{Lexer, Token, Group, Op};
+use crate::lexer::{TokenGiver, Token, Group, Op};
 use Token::*;
 use Group::*;
 use Op::*;
@@ -25,23 +25,21 @@ pub struct Match {
     name: Option<String>
 }
 
-struct Parser { 
+struct Parser<T: TokenGiver> { 
     cur: Token,
-    lexer: Lexer,
-    matches: Vec<Match>
+    lexer: T,
 }
 
-impl Parser {
-    pub fn new(mut lexer: Lexer) -> Self {
+impl<T: TokenGiver> Parser<T> {
+    pub fn new(mut lexer: T) -> Self {
         Parser { 
-            cur: lexer.next().unwrap(), 
-            lexer, 
-            matches: Vec::new() 
+            cur: lexer.next(), 
+            lexer,
         }
     }
 
     fn advance(&mut self) { 
-        self.cur = self.lexer.next().unwrap(); 
+        self.cur = self.lexer.next();
     }
 
     fn consume(&mut self, token: Token) {
@@ -52,22 +50,24 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) {
+    pub fn parse(&mut self) -> Vec<Match> {
+        let mut matches = Vec::new();
         while let GROUP(DBQ) = self.cur {
             self.consume(GROUP(DBQ));
             let expr = self.expr();
             self.consume(GROUP(DBQ));
             if let SEMI = self.cur {
                 self.consume(SEMI);
-                self.matches.push(Match { expr, name: None });
+                matches.push(Match { expr, name: None });
             } else { 
                 let name = self.name(); 
-                self.matches.push(Match { expr, name: Some(name) });
+                matches.push(Match { expr, name: Some(name) });
             }
         }
         if self.cur != EOF { 
             panic!("Invalid Construction!");
         }
+        return matches;
     }
 
     fn expr(&mut self) -> Node {
@@ -177,8 +177,84 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::{Parser};
+    use crate::lexer::{TokenGiver, Token, Group, Op};
+    use Token::*;
+    use Group::*;
+    use Op::*;
+    use std::fs;
+    use std::fs::File;
+    use std::io::{BufRead, BufReader};
+    struct TokenReader { pos: u32, tokens: Vec<Token> } 
+    impl TokenReader {
+        pub fn new(path: String) -> Self {
+            let file = File::open(path).expect("Failed to open file");
+            let reader = BufReader::new(file);
+            let mut tokens: Vec<Token> = Vec::new();
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    let temp: Vec<&str> = line.split(',').collect();
+                    for word in temp { 
+                        let token = match word {
+                            "STAR" | "OP(STAR)"         => OP(STAR),
+                            "PLUS" | "OP(PLUS)"         => OP(PLUS),
+                            "QUESTION" | "OP(QUESTION)" => OP(QUESTION),
+                            "BAR" | "OP(BAR)"           => OP(BAR),
+                            "DASH" | "OP(DASH)"         => OP(DASH),
+                            "AND" | "OP(AND)"           => OP(AND),
+                            "DBQ" | "GROUP(DBQ)"        => GROUP(DBQ),
+                            "LBR" | "GROUP(LBR)"        => GROUP(LBR),
+                            "RBR" | "GROUP(RBR)"        => GROUP(RBR),
+                            "LCR" | "GROUP(LCR)"        => GROUP(LCR),
+                            "RCR" | "GROUP(RCR)"        => GROUP(RCR),
+                            "LPR" | "GROUP(LPR)"        => GROUP(LPR),
+                            "RPR" | "GROUP(RPR)"        => GROUP(RPR),
+                            ";" | "SEMI"                => SEMI,
+                            s => {
+                                let parsed_chars: Vec<char> = s
+                                    .escape_default()
+                                    .collect();
+                                if s.len() == 1     { CHAR(parsed_chars[0]); }
+                                else if s.len() > 9 { CHAR(parsed_chars[6]); }
+                                panic!("Unrecognized Token");
+                            }
+                        };
+                        tokens.push(token);
+                    }       
+                }
+            }
+            return TokenReader { pos: 0, tokens };
+        }
+    }
+    
+    impl TokenGiver for TokenReader {
+        fn next(&mut self) -> Token {
+            self.pos += 1; 
+            return self.tokens[(self.pos - 1) as usize];
+        }
+    }
+
     #[test]
-    fn test() {
+    fn test_discrimination() {
+        // figure out why I need to_owned() here.
+        let dir_path = "./test_data/parser/input";
+        if let Ok(entries) = fs::read_dir(dir_path) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let file_name = entry.file_name();
+                    let mut tr = TokenReader::new(
+                        dir_path.to_owned() +
+                        file_name.to_str().unwrap()
+                    );
+                    let mut parser = Parser::new(tr);
+                    let matches = parser.parse();
+                    let result = std::panic::catch_unwind(|| parser.parse());
+                    assert!(result.is_err() == );
+                }
+            }
+        } else {
+            println!("Failed to read directory");
+        }
         assert_eq!(4, 4);
     }
 }
