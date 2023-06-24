@@ -1,7 +1,18 @@
-use crate::lexer::{TokenGiver, Token, Group, Op};
+use crate::lexer::{TokenGiver, Token, TokenErr, Group, Op};
 use Token::*;
 use Group::*;
 use Op::*;
+
+#[derive(Debug)]
+pub enum ParseError {
+    Parse(String),
+    Token(TokenErr)
+}
+impl From<TokenErr> for ParseError {
+    fn from(err: TokenErr) -> ParseError {
+        return ParseError::Token(err);
+    }
+}
 
 pub enum Node {
     Char(char),
@@ -20,61 +31,68 @@ pub struct UnaryExprNode {
     op: Op,
 }
 
-pub struct Match {
-    expr: Node,
+pub struct AST {
+    root: Node,
     name: Option<String>
 }
 
-struct Parser<T: TokenGiver> { 
+pub struct Parser<T: TokenGiver> {
     cur: Token,
     lexer: T,
 }
 
 impl<T: TokenGiver> Parser<T> {
-    pub fn new(mut lexer: T) -> Self {
-        Parser { 
-            cur: lexer.next(), 
+    pub fn new(mut lexer: T) -> Result<Self, ParseError> {
+        return Ok(Parser { 
+            cur: lexer.next()?, 
             lexer,
-        }
+        });
     }
 
-    fn advance(&mut self) { 
-        self.cur = self.lexer.next();
+    fn advance(&mut self) -> Result<(), ParseError> { 
+        self.cur = self.lexer.next()?;
+        return Ok(());
     }
 
-    fn consume(&mut self, token: Token) {
+    fn consume(&mut self, token: Token, caller: &str) -> Result<(), ParseError> {
         if token == self.cur {
-            self.advance();
+            return Ok(self.advance()?)
         } else {
-            panic!("Expected Different Token!");
+            return Err(ParseError::Parse(
+                format!("{}: Expected {:?} but got {:?}",
+                    caller, token, self.cur)
+            ));
         }
     }
 
-    pub fn parse(&mut self) -> Vec<Match> {
+    pub fn parse(&mut self) -> Result<Vec<AST>, ParseError> {
+        self.advance()?;
         let mut matches = Vec::new();
         while let GROUP(DBQ) = self.cur {
-            self.consume(GROUP(DBQ));
-            let expr = self.expr();
-            self.consume(GROUP(DBQ));
+            self.consume(GROUP(DBQ), "Parse")?;
+            let root = self.expr()?;
+            self.consume(GROUP(DBQ), "Parse")?;
             if let SEMI = self.cur {
-                self.consume(SEMI);
-                matches.push(Match { expr, name: None });
+                self.consume(SEMI, "Parse")?;
+                matches.push(AST { root, name: None });
             } else { 
-                let name = self.name(); 
-                matches.push(Match { expr, name: Some(name) });
+                let name = self.name()?; 
+                matches.push(AST { root, name: Some(name) });
             }
         }
         if self.cur != EOF { 
-            panic!("Invalid Construction!");
+            return Err(ParseError::Parse(
+                format!("Parse: Expected EOF but got {:?}", self.cur)
+            ));
         }
-        return matches;
+        return Ok(matches);
     }
 
-    fn expr(&mut self) -> Node {
-        let mut root = self.term();
+    fn expr(&mut self) -> Result<Node, ParseError> {
+        let mut root = self.term()?;
         while let OP(BAR) = self.cur {
-            self.advance();
-            let term = self.term();
+            self.advance()?;
+            let term = self.term()?;
             let new_root = BinaryExprNode {
                 op: BAR,
                 left: Box::new(root),
@@ -82,13 +100,13 @@ impl<T: TokenGiver> Parser<T> {
             };
             root = Node::BinaryExpr(new_root);
         }
-        return root;
+        return Ok(root);
     }
 
-    fn term(&mut self) -> Node {
-        let mut root = self.factor();
+    fn term(&mut self) -> Result<Node, ParseError> {
+        let mut root = self.factor()?;
         while let CHAR(_) | GROUP(LPR) = self.cur {
-            let node= self.factor();
+            let node= self.factor()?;
             let new_root = BinaryExprNode {
                 op: AND,
                 left: Box::new(root),
@@ -96,44 +114,48 @@ impl<T: TokenGiver> Parser<T> {
             };
             root = Node::BinaryExpr(new_root);
         }
-        return root;
+        return Ok(root);
     }
 
-    fn factor(&mut self) -> Node {
-        let node = self.atom();
+    fn factor(&mut self) -> Result<Node, ParseError> {
+        let node = self.atom()?;
         if let OP(op) = self.cur {
             if let QUESTION | STAR | PLUS = op {
                 let root = UnaryExprNode { 
                     op, child: Box::new(node)
                 };
-                return Node::UnaryExpr(root);
+                return Ok(Node::UnaryExpr(root));
             }
-            return node;
+            return Ok(node);
         }
-        panic!("Expected Operator!");
+        return Err(ParseError::Parse(
+            format!("Factor: Expected Operator but got {:?}", self.cur)
+        ));
     }
 
-    fn atom(&mut self) -> Node {
+    fn atom(&mut self) -> Result<Node, ParseError> {
         match self.cur {
             GROUP(LPR) => { 
-                self.consume(GROUP(LPR));
+                self.consume(GROUP(LPR), "Atom")?;
                 let node = self.expr();
-                self.consume(GROUP(RPR));
+                self.consume(GROUP(RPR), "Atom")?;
                 return node;
             },
-            CHAR(c) => return Node::Char(c),
-            GROUP(LBR) => return self.dash(),
-            _ => panic!("Invalid ATOM!")
+            CHAR(c) => return Ok(Node::Char(c)),
+            GROUP(LBR) => return Ok(self.dash()?),
+            token => Err(ParseError::Parse(
+                format!("Atom: Expected CHAR, [, (, but found {:?}", token)
+            ))
         }
     }
 
-    fn dash(&mut self) -> Node {
-        let mut root: Node;
-        self.consume(GROUP(LBR));
+    fn dash(&mut self) -> Result<Node, ParseError> {
+        let root: Node;
+        self.consume(GROUP(LBR), "Dash")?;
         let c = self.cur.char();
         if c.is_digit(10) {
-            self.advance();
-            self.consume(OP(DASH));
+            self.advance()?;
+            self.consume(OP(DASH), "Dash")?;
             let d = self.cur.char();
             if d.is_digit(10) { 
                 root = Node::BinaryExpr(BinaryExprNode {
@@ -141,11 +163,14 @@ impl<T: TokenGiver> Parser<T> {
                     left: Box::new(Node::Char(c)),
                     right: Box::new(Node::Char(d))
                 });
-            } 
-            else { panic!("Invalid Dash!"); }
+            } else {
+                return Err(ParseError::Parse(
+                    format!("Dash: Expected Num-Num but got Num-{}", c)
+                ));
+            }
         } else if c.is_alphabetic() {
-            self.advance();
-            self.consume(OP(DASH));
+            self.advance()?;
+            self.consume(OP(DASH), "Dash")?;
             let d = self.cur.char();
             if d.is_alphabetic() {
                 root = Node::BinaryExpr(BinaryExprNode {
@@ -154,41 +179,40 @@ impl<T: TokenGiver> Parser<T> {
                     right: Box::new(Node::Char(d))
                 });
             } 
-            else { panic!("Invalid Dash!"); }
+            else {
+                return Err(ParseError::Parse(
+                    format!("Dash: Expected Alpha-Alpha but got Alpha-{}", c)
+                ));
+            }
         } else {
-            panic!("INVALID DASH");
+            return Err(ParseError::Parse(
+                format!("Dash: Expected Alphanumeric but got {}", c)
+            ));
         }
-        self.consume(GROUP(RBR));
-        return root;
+        self.consume(GROUP(RBR), "Dash")?;
+        return Ok(root);
     }
 
-    fn name(&mut self) -> String {
+    fn name(&mut self) -> Result<String, ParseError> {
         let mut name: String = String::new();
         while let CHAR(c) = self.cur {
             name.push(c);
-            self.advance();
+            self.advance()?;
         }
-        if self.cur == SEMI {
-            return name;
-        }
-        panic!("Invalid Characters In Name!");
+        self.consume(SEMI, "Name")?;
+        return Ok(name);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::{Parser};
-    use crate::lexer::{TokenGiver, Token, Group, Op};
-    use Token::*;
-    use Group::*;
-    use Op::*;
+    use super::*;
     use std::fs;
-    use std::fs::File;
-    use std::io::{BufRead, BufReader};
+    use std::io::{BufReader, BufRead};
     struct TokenReader { pos: u32, tokens: Vec<Token> } 
     impl TokenReader {
         pub fn new(path: String) -> Self {
-            let file = File::open(path).expect("Failed to open file");
+            let file = fs::File::open(path).expect("Failed to open file");
             let reader = BufReader::new(file);
             let mut tokens: Vec<Token> = Vec::new();
             for line in reader.lines() {
@@ -226,30 +250,37 @@ mod tests {
             return TokenReader { pos: 0, tokens };
         }
     }
-    
+
     impl TokenGiver for TokenReader {
-        fn next(&mut self) -> Token {
+        fn next(&mut self) -> Result<Token, TokenErr> {
             self.pos += 1; 
-            return self.tokens[(self.pos - 1) as usize];
+            return Ok(self.tokens[(self.pos - 1) as usize]);
         }
     }
 
     #[test]
-    fn test_discrimination() {
+    fn find_valid_invalid() {
         // figure out why I need to_owned() here.
-        let dir_path = "./test_data/parser/input";
-        if let Ok(entries) = fs::read_dir(dir_path) {
+        let in_path = "./test_data/parser/input";
+        let out_path = "./test_data/parser/output";
+        if let Ok(entries) = fs::read_dir(in_path) {
             for entry in entries {
                 if let Ok(entry) = entry {
                     let file_name = entry.file_name();
-                    let mut tr = TokenReader::new(
-                        dir_path.to_owned() +
-                        file_name.to_str().unwrap()
+                    let tr = TokenReader::new(
+                        format!("{}/{:?}", in_path, file_name)
                     );
-                    let mut parser = Parser::new(tr);
+
+                    let ans= fs::read_to_string(
+                        format!("{}/{:?}", out_path, file_name)
+                        )
+                        .unwrap()
+                        .chars()
+                        .nth(0)
+                        .expect("Shouldn't Be Empty!");
+                    let mut parser = Parser::new(tr).expect("Invalid Token Stream");
                     let matches = parser.parse();
-                    let result = std::panic::catch_unwind(|| parser.parse());
-                    assert!(result.is_err() == );
+                    assert!(matches.is_err() == (ans == 'F'));
                 }
             }
         } else {
