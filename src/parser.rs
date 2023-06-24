@@ -10,13 +10,13 @@ pub enum Node {
 }
 
 pub struct BinaryExprNode {
-    left:  Option<Box<Node>>,
-    right: Option<Box<Node>>,
+    left:  Box<Node>,
+    right: Box<Node>,
     op: Op,
 }
 
 pub struct UnaryExprNode {
-    child: Option<Box<Node>>,
+    child: Box<Node>,
     op: Op,
 }
 
@@ -77,8 +77,8 @@ impl Parser {
             let term = self.term();
             let new_root = BinaryExprNode {
                 op: BAR,
-                left: Some(Box::new(root)),
-                right: Some(Box::new(term))
+                left: Box::new(root),
+                right: Box::new(term)
             };
             root = Node::BinaryExpr(new_root);
         }
@@ -91,8 +91,8 @@ impl Parser {
             let node= self.factor();
             let new_root = BinaryExprNode {
                 op: AND,
-                left: Some(Box::new(root)),
-                right: Some(Box::new(node))
+                left: Box::new(root),
+                right: Box::new(node)
             };
             root = Node::BinaryExpr(new_root);
         }
@@ -104,7 +104,7 @@ impl Parser {
         if let OP(op) = self.cur {
             if let QUESTION | STAR | PLUS = op {
                 let root = UnaryExprNode { 
-                    op, child: Some(Box::new(node))
+                    op, child: Box::new(node)
                 };
                 return Node::UnaryExpr(root);
             }
@@ -128,33 +128,38 @@ impl Parser {
     }
 
     fn dash(&mut self) -> Node {
+        let mut root: Node;
         self.consume(GROUP(LBR));
-        let mut root = BinaryExprNode {
-            op: DASH, left: None, right: None
-        };
-        let mut c = self.cur.char();
-        root.left = Some(Box::new(Node::Char(c)));
+        let c = self.cur.char();
         if c.is_digit(10) {
             self.advance();
             self.consume(OP(DASH));
-            c = self.cur.char();
-            if c.is_digit(10) { 
-                root.right = Some(Box::new(Node::Char(c)));  
-                return Node::BinaryExpr(root);
-            }
+            let d = self.cur.char();
+            if d.is_digit(10) { 
+                root = Node::BinaryExpr(BinaryExprNode {
+                    op: DASH,
+                    left: Box::new(Node::Char(c)),
+                    right: Box::new(Node::Char(d))
+                });
+            } 
+            else { panic!("Invalid Dash!"); }
         } else if c.is_alphabetic() {
             self.advance();
             self.consume(OP(DASH));
-            c = self.cur.char();
-            if c.is_alphabetic() {
-                root.right = Some(Box::new(Node::Char(c)));  
-                return Node::BinaryExpr(root);
-            }
+            let d = self.cur.char();
+            if d.is_alphabetic() {
+                root = Node::BinaryExpr(BinaryExprNode {
+                    op: DASH,
+                    left: Box::new(Node::Char(c)),
+                    right: Box::new(Node::Char(d))
+                });
+            } 
+            else { panic!("Invalid Dash!"); }
         } else {
             panic!("INVALID DASH");
         }
         self.consume(GROUP(RBR));
-        return Node::BinaryExpr(root);
+        return root;
     }
 
     fn name(&mut self) -> String {
