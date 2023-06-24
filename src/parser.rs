@@ -121,15 +121,14 @@ impl Parser {
                 self.consume(GROUP(RPR));
                 return node;
             },
-            CHAR(c) => {
-                return Node::Char(c);
-            }
+            CHAR(c) => return Node::Char(c),
+            GROUP(LBR) => return self.dash(),
             _ => panic!("Invalid ATOM!")
         }
     }
 
-    /* ****** IGNORE FOR NOW ********* */
     fn dash(&mut self) -> Node {
+        self.consume(GROUP(LBR));
         let mut root = BinaryExprNode {
             op: DASH, left: None, right: None
         };
@@ -151,10 +150,12 @@ impl Parser {
                 root.right = Some(Box::new(Node::Char(c)));  
                 return Node::BinaryExpr(root);
             }
+        } else {
+            panic!("INVALID DASH");
         }
-        panic!("INVALID DASH");
+        self.consume(GROUP(RBR));
+        return Node::BinaryExpr(root);
     }
-    /* ******************************* */
 
     fn name(&mut self) -> String {
         let mut name: String = String::new();

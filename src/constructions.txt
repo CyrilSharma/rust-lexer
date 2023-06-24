@@ -7,7 +7,9 @@ MATCH  => [ EXPR ] ;
 EXPR         => TERM ('|' TERM)*
 TERM         => FACTOR*
 FACTOR       => ATOM ('*' | '+' | '?')?
-ATOM         => CHAR | '(' EXPR ')'
+ATOM         => CHAR | '(' EXPR ')' | DASH
+DASH         => [ RANGE* ]
+RANGE        => a-z, 0-9...
 
 EXPR   => FACTOR EXPR | FACTOR+ | FACTOR*
 FACTOR => [DASHES] | CHAR(QUANTIFIER|EPS) | (EXPR)
