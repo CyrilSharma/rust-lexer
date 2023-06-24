@@ -1,81 +1,122 @@
 use std::fs;
+use Token::*;
+use Group::*;
+use Op::*;
 
-// [, ], {, }, (, ), -, *
-#[derive(Debug, Eq)]
-enum Token {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Op {
+    STAR,
+    PLUS,
+    QUESTION,
+    BAR,
+    DASH,
+    AND
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Group {
+    DBQ,
     LBR,
     RBR,
+    LCR,
+    RCR,
     LPR,
-    RPR,
-    DASH,
-    STAR,
+    RPR
+}
+
+// ", [, ], {, }, (, ), -, *, ;
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Token {
+    OP(Op),
+    GROUP(Group),
     CHAR(char),
+    SEMI,
     EOF
 }
 
+impl Token {
+    pub fn char(&self) -> char {
+        if let CHAR(c) = *self {
+            return c;
+        }
+        panic!("Not A Letter!");
+    }
+}
+
 #[derive(Debug)]
-enum TokenErr {
+pub enum TokenErr {
     InvalidExpr,
     InvalidEscape
 }
 
 
-struct Lexer { 
-    chars: Vector<char>,
-    pos: u32
+pub struct Lexer { 
+    chars: Vec<char>,
+    pos: u32,
+    enclosed: bool
 }
 
 impl Lexer {
-    fn new(fname: String) -> Self {
-        chars = fs::read_to_string(fname)
+    pub fn new(fname: &str) -> Self {
+        let chars = fs::read_to_string(fname)
             .unwrap()
             .chars()
             .collect();
-        Lexer { chars, pos: 0 }
+        Lexer { chars, pos: 0, enclosed: false }
     }
 
-    fn nextchar() {
-        pos += 1;
-        return chars[pos - 1];
+    fn nextchar(&mut self) -> char {
+        self.pos += 1;
+        return self.chars[(self.pos - 1) as usize];
     }
 
-    fn next() -> Result<Token, TokenErr> {
+    pub fn next(&mut self) -> Result<Token, TokenErr> {
         loop {
-            if (pos == chars.len()) { 
-                return Ok(Token::EOF)
+            if self.pos == self.chars.len() as u32 { 
+                return Ok(EOF)
             }
-            match nextchar() {
-                ' ' | '\t' | '\n' | '\r' => {}
-                '[' => return Ok(Token::LBR),
-                ']' => return Ok(Token::RBR),
-                '{' => return Ok(Token::LCR),
-                '}' => return Ok(Token::RCR),
-                '(' => return Ok(Token::LPR),
-                ')' => return Ok(Token::RPR),
-                '-' => return Ok(Token::DASH),
-                '*' => return Ok(Token::STAR),
+            match self.nextchar() {
+                '\t' | '\n' | '\r' => {}
+                '"' => { 
+                    self.enclosed = !self.enclosed; 
+                    return Ok(GROUP(DBQ)); 
+                },
+                '[' => return Ok(GROUP(LBR)),
+                ']' => return Ok(GROUP(RBR)),
+                '{' => return Ok(GROUP(LCR)),
+                '}' => return Ok(GROUP(RCR)),
+                '(' => return Ok(GROUP(LPR)),
+                ')' => return Ok(GROUP(RPR)),
+                '-' => return Ok(OP(DASH)),
+                '*' => return Ok(OP(STAR)),
+                '+' => return Ok(OP(PLUS)),
+                ';' => return Ok(SEMI),
                 '#' => {
-                    while (pos < chars.len()) {
-                        if nextchar() == '\n' { break }
+                    while self.pos < self.chars.len() as u32 {
+                        if self.nextchar() == '\n' { break }
                     }
                 }
                 other => {
                     match other {
-                        ']' => break,
                         '\\' => {
-                            if pos == chars.len() - 1 { return Err(TokenErr::InvalidExpr) }
-                            let c = nextchar();
+                            if self.pos == (self.chars.len() - 1) as u32 
+                                { return Err(TokenErr::InvalidExpr) }
+                            let c = self.nextchar();
                             match c {
-                                'n'  => return Ok(Char('\n')),
-                                't'  => return Ok(Char('\t')),
-                                'r'  => return Ok(Char('\r')),
-                                '\\' => return Ok(Char('\\')),
-                                ']'  => return Ok(Char('\r')),
-                                _    => return Err(Token::InvalidEscape)
+                                'n'  => return Ok(CHAR('\n')),
+                                't'  => return Ok(CHAR('\t')),
+                                'r'  => return Ok(CHAR('\r')),
+                                '\\' | ']' | '[' | ')' | '(' |
+                                '-' | '*' | ';' | '+' | '"' => {
+                                    if self.enclosed { return Ok(CHAR(c)) }
+                                    else { return Err(TokenErr::InvalidExpr); }
+                                },
+                                _    => return Err(TokenErr::InvalidEscape)
                             }
                         }
+                        ' ' => if self.enclosed { return Ok(CHAR(' ')) },
                         '\n' | '\r' => return Err(TokenErr::InvalidExpr),
-                        _ => return Ok(Token(other))
+                        _ => return Ok(CHAR(other))
                     }
                 }
             }
@@ -83,13 +124,19 @@ impl Lexer {
     }
 }
 
-
 // Figure out how to test this...
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    // Add -- --nocapture to see output.
+    fn inspection() {
+        use super::*;
+        let mut lx = Lexer::new("src/example.tk");
+        loop {
+            let tk = lx.next().unwrap();
+            println!("{:?}", tk);
+            if tk == EOF { break }
+        }
+        assert_eq!(4, 4);
     }
 }
