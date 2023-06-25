@@ -208,7 +208,6 @@ impl<T: TokenGiver> Parser<T> {
 mod tests {
     use super::*;
     use std::fs;
-    use std::io::{BufReader, BufRead};
     use crate::lexer::Lexer;
     struct TokenReader { pos: u32, tokens: Vec<Token> } 
     impl TokenReader {
@@ -260,7 +259,6 @@ mod tests {
                             }
                         }
                         else {
-                            println!("{}", s.len());
                             panic!("Unrecognized Token: {}", s);
                         }
                         res
@@ -282,7 +280,7 @@ mod tests {
 
     #[test]
     fn test_parser() {
-        let path = "src/test_data/parser/".to_string();
+        let path = "src/test_data/parser".to_string();
         if let Ok(entries) = fs::read_dir(format!("{path}/input")) {
             for entry in entries {
                 if entry.is_err() { panic!("Invalid Directory"); }
@@ -300,7 +298,7 @@ mod tests {
                         format!("{path}/input/{file_name}"),
                         ident
                     )),
-                    "AST" => assert!(AST(
+                    "AST" => assert!(ast(
                         format!("{path}/input/{file_name}"),
                         format!("{path}/output/{file_name}")
                     )),
@@ -323,11 +321,20 @@ mod tests {
         }
     }
 
-    fn AST(inpath: String, outpath: String) -> bool {
+    fn ast(inpath: String, outpath: String) -> bool {
         let tr = Lexer::new(&inpath).expect("File Doesn't Exist");
         let mut parser = Parser::new(tr).expect("Invalid Token Stream");
         let matches = parser.parse().expect("Expression should be valid.");
-        for m in matches { m.print(); }
+        for m in matches { 
+            let ans: String = fs::read_to_string(&outpath).expect("File doesn't exist.");
+            if ans.trim() != m.to_string().trim() { 
+                println!("{}", ans.trim());
+                println!("________________");
+                println!("{}", m.to_string().trim());
+                return false; 
+            }
+            //m.print(); 
+        }
         return true;
     }
 }

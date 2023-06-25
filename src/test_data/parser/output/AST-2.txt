@@ -1,0 +1,13 @@
+<BAR>
+  <BAR>
+    <BAR>
+      <BAR>
+        <a> </a>
+        <b> </b>
+      </BAR>
+      <c> </c>
+    </BAR>
+    <d> </d>
+  </BAR>
+  <e> </e>
+</BAR>

@@ -23,23 +23,30 @@ pub struct AST {
 }
 impl AST {
     pub fn print(&self) {
-        self._print(&self.root, 0);
+        print!("{}", self.to_string());
     }
+
+    pub fn to_string(&self) -> String {
+        let mut out = String::new();
+        self._print(&self.root, 0, &mut out);
+        return out;
+    } 
+
     /* OUTPUT TO XML? */
-    fn _print(&self, node: &Node, depth: u32) {
+    fn _print(&self, node: &Node, depth: u32, out: &mut String) {
         let mut tabs = String::new();
         for _ in 0..depth { tabs.push_str("  "); }
         match node {
             Node::BinaryExpr(n) => {
-                println!("{tabs}<{:?}>", n.op);
-                self._print(&n.left, depth+1);
-                self._print(&n.right, depth+1);
-                println!("{tabs}</{:?}>", n.op);
+                out.push_str(&format!("{tabs}<{:?}>\n", n.op));
+                self._print(&n.left, depth+1, out);
+                self._print(&n.right, depth+1, out);
+                out.push_str(&format!("{tabs}</{:?}>\n", n.op));
             },
             Node::UnaryExpr(n) => {
-                println!("{tabs}<{:?}>", n.op);
-                self._print(&n.child, depth+1);
-                println!("{tabs}</{:?}>", n.op);
+                out.push_str(&format!("{tabs}<{:?}>\n", n.op));
+                self._print(&n.child, depth+1, out);
+                out.push_str(&format!("{tabs}</{:?}>\n", n.op));
             },
             Node::Char(c) => {
                 // just so I don't get xml issues.
@@ -65,8 +72,7 @@ impl AST {
                     '\n' => "NEWLINE".to_string(),
                     _ => panic!("Not Implemented!")
                 };
-                println!("{tabs}<{name}> </{name}>");
-                
+                out.push_str(&format!("{tabs}<{name}> </{name}>\n"));
             }
         }
     }

@@ -95,6 +95,7 @@ impl TokenGiver for Lexer {
                 '-' => return Ok(OP(DASH)),
                 '*' => return Ok(OP(STAR)),
                 '+' => return Ok(OP(PLUS)),
+                '|' => return Ok(OP(BAR)),
                 ';' => return Ok(SEMI),
                 '#' => while self.pos < self.chars.len() as u32 {
                     if self.nextchar() == '\n' { break }
@@ -135,7 +136,6 @@ mod tests {
     fn test_lexer() {
         // figure out why I need to_owned() here.
         let in_path = "src/test_data/lexer/input";
-        let out_path = "src/test_data/lexer/output";
         if let Ok(entries) = fs::read_dir(in_path) {
             for entry in entries {
                 if entry.is_err() { panic!("Invalid Directory"); }
@@ -169,7 +169,7 @@ mod tests {
                 if tk == EOF { break }
             },
             Err(tk) => {
-                //println!("{:?}", tk);
+                println!("{:?}", tk);
                 return "wrong" == ans;
             }
         }}
@@ -177,6 +177,7 @@ mod tests {
     }
 
     // Add -- --nocapture to see output.
+    #[allow(dead_code)]
     fn inspection() {
         use super::*;
         let mut lx = Lexer::new("src/example.tk").expect("File not found.");

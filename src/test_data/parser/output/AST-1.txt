@@ -1,0 +1,30 @@
+<AND>
+  <STAR>
+    <BAR>
+      <DASH>
+        <a> </a>
+        <z> </z>
+      </DASH>
+      <DASH>
+        <A> </A>
+        <Z> </Z>
+      </DASH>
+    </BAR>
+  </STAR>
+  <BAR>
+    <BAR>
+      <DASH>
+        <a> </a>
+        <z> </z>
+      </DASH>
+      <DASH>
+        <A> </A>
+        <Z> </Z>
+      </DASH>
+    </BAR>
+    <DASH>
+      <ZERO> </ZERO>
+      <NINE> </NINE>
+    </DASH>
+  </BAR>
+</AND>

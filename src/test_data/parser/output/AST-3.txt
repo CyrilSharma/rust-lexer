@@ -1,0 +1,17 @@
+<AND>
+  <STAR>
+    <AND>
+      <STAR>
+        <BAR>
+          <BAR>
+            <a> </a>
+            <b> </b>
+          </BAR>
+          <c> </c>
+        </BAR>
+      </STAR>
+      <a> </a>
+    </AND>
+  </STAR>
+  <b> </b>
+</AND>
