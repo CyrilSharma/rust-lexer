@@ -1,4 +1,5 @@
 use crate::lexer::{TokenGiver, Token, TokenErr, Group, Op};
+use crate::ast::{Node, BinaryExprNode, UnaryExprNode, AST};
 use Token::*;
 use Group::*;
 use Op::*;
@@ -14,28 +15,6 @@ impl From<TokenErr> for ParseError {
     }
 }
 
-pub enum Node {
-    Char(char),
-    BinaryExpr(BinaryExprNode),
-    UnaryExpr(UnaryExprNode),
-}
-
-pub struct BinaryExprNode {
-    left:  Box<Node>,
-    right: Box<Node>,
-    op: Op,
-}
-
-pub struct UnaryExprNode {
-    child: Box<Node>,
-    op: Op,
-}
-
-pub struct AST {
-    root: Node,
-    name: Option<String>
-}
-
 pub struct Parser<T: TokenGiver> {
     cur: Token,
     lexer: T,
@@ -49,14 +28,16 @@ impl<T: TokenGiver> Parser<T> {
         });
     }
 
-    fn advance(&mut self) -> Result<(), ParseError> { 
+    fn advance(&mut self) -> Result<Token, ParseError> {
+        let temp = self.cur;
         self.cur = self.lexer.next()?;
-        return Ok(());
+        return Ok(temp);
     }
 
     fn consume(&mut self, token: Token, caller: &str) -> Result<(), ParseError> {
         if token == self.cur {
-            return Ok(self.advance()?)
+            self.advance()?;
+            return Ok(())
         } else {
             return Err(ParseError::Parse(
                 format!("{}: Expected {:?} but got {:?}",
@@ -66,7 +47,6 @@ impl<T: TokenGiver> Parser<T> {
     }
 
     pub fn parse(&mut self) -> Result<Vec<AST>, ParseError> {
-        self.advance()?;
         let mut matches = Vec::new();
         while let GROUP(DBQ) = self.cur {
             self.consume(GROUP(DBQ), "Parse")?;
@@ -105,7 +85,7 @@ impl<T: TokenGiver> Parser<T> {
 
     fn term(&mut self) -> Result<Node, ParseError> {
         let mut root = self.factor()?;
-        while let CHAR(_) | GROUP(LPR) = self.cur {
+        while let CHAR(_) | GROUP(LPR) | GROUP(LBR) = self.cur {
             let node= self.factor()?;
             let new_root = BinaryExprNode {
                 op: AND,
@@ -124,39 +104,61 @@ impl<T: TokenGiver> Parser<T> {
                 let root = UnaryExprNode { 
                     op, child: Box::new(node)
                 };
+                self.consume(OP(op), "Factor")?;
                 return Ok(Node::UnaryExpr(root));
             }
-            return Ok(node);
         }
-        return Err(ParseError::Parse(
-            format!("Factor: Expected Operator but got {:?}", self.cur)
-        ));
+        return Ok(node);
     }
 
     fn atom(&mut self) -> Result<Node, ParseError> {
-        match self.cur {
+        match self.advance()? {
             GROUP(LPR) => { 
-                self.consume(GROUP(LPR), "Atom")?;
-                let node = self.expr();
+                let node = self.expr()?;
                 self.consume(GROUP(RPR), "Atom")?;
-                return node;
+                return Ok(node);
             },
             CHAR(c) => return Ok(Node::Char(c)),
-            GROUP(LBR) => return Ok(self.dash()?),
+            GROUP(LBR) => return Ok(self.dashes()?),
             token => Err(ParseError::Parse(
                 format!("Atom: Expected CHAR, [, (, but found {:?}", token)
             ))
         }
     }
 
+    fn dashes(&mut self) -> Result<Node, ParseError> {
+        let mut root: Option<Node> = None;
+        loop { match self.cur {
+            CHAR(_) => {
+                let dash = self.dash()?;
+                match root {
+                    None => root = Some(dash),
+                    Some(node) => root = Some(Node::BinaryExpr(
+                        BinaryExprNode { 
+                            left: Box::new(node), 
+                            right: Box::new(dash), 
+                            op: BAR 
+                        }
+                    ))
+                }
+            },
+            _ => break
+        }}
+        self.consume(GROUP(RBR), "Dashes")?;
+        match root {
+            None => return Err(ParseError::Parse(
+                format!("Dashes: No Dash Found")
+            )),
+            Some(node) => return Ok(node)
+        }
+    }
+
     fn dash(&mut self) -> Result<Node, ParseError> {
         let root: Node;
-        self.consume(GROUP(LBR), "Dash")?;
-        let c = self.cur.char();
+        let c = self.advance()?.char();
         if c.is_digit(10) {
-            self.advance()?;
             self.consume(OP(DASH), "Dash")?;
-            let d = self.cur.char();
+            let d = self.advance()?.char();
             if d.is_digit(10) { 
                 root = Node::BinaryExpr(BinaryExprNode {
                     op: DASH,
@@ -165,13 +167,12 @@ impl<T: TokenGiver> Parser<T> {
                 });
             } else {
                 return Err(ParseError::Parse(
-                    format!("Dash: Expected Num-Num but got Num-{}", c)
+                    format!("Dash: Expected Num-Num but got Num-{}", d)
                 ));
             }
         } else if c.is_alphabetic() {
-            self.advance()?;
             self.consume(OP(DASH), "Dash")?;
-            let d = self.cur.char();
+            let d = self.advance()?.char();
             if d.is_alphabetic() {
                 root = Node::BinaryExpr(BinaryExprNode {
                     op: DASH,
@@ -181,7 +182,7 @@ impl<T: TokenGiver> Parser<T> {
             } 
             else {
                 return Err(ParseError::Parse(
-                    format!("Dash: Expected Alpha-Alpha but got Alpha-{}", c)
+                    format!("Dash: Expected Alpha-Alpha but got Alpha-{}", d)
                 ));
             }
         } else {
@@ -189,7 +190,6 @@ impl<T: TokenGiver> Parser<T> {
                 format!("Dash: Expected Alphanumeric but got {}", c)
             ));
         }
-        self.consume(GROUP(RBR), "Dash")?;
         return Ok(root);
     }
 
@@ -209,43 +209,64 @@ mod tests {
     use super::*;
     use std::fs;
     use std::io::{BufReader, BufRead};
+    use crate::lexer::Lexer;
     struct TokenReader { pos: u32, tokens: Vec<Token> } 
     impl TokenReader {
         pub fn new(path: String) -> Self {
-            let file = fs::File::open(path).expect("Failed to open file");
-            let reader = BufReader::new(file);
             let mut tokens: Vec<Token> = Vec::new();
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    let temp: Vec<&str> = line.split(',').collect();
-                    for word in temp { 
-                        let token = match word {
-                            "STAR" | "OP(STAR)"         => OP(STAR),
-                            "PLUS" | "OP(PLUS)"         => OP(PLUS),
-                            "QUESTION" | "OP(QUESTION)" => OP(QUESTION),
-                            "BAR" | "OP(BAR)"           => OP(BAR),
-                            "DASH" | "OP(DASH)"         => OP(DASH),
-                            "AND" | "OP(AND)"           => OP(AND),
-                            "DBQ" | "GROUP(DBQ)"        => GROUP(DBQ),
-                            "LBR" | "GROUP(LBR)"        => GROUP(LBR),
-                            "RBR" | "GROUP(RBR)"        => GROUP(RBR),
-                            "LCR" | "GROUP(LCR)"        => GROUP(LCR),
-                            "RCR" | "GROUP(RCR)"        => GROUP(RCR),
-                            "LPR" | "GROUP(LPR)"        => GROUP(LPR),
-                            "RPR" | "GROUP(RPR)"        => GROUP(RPR),
-                            ";" | "SEMI"                => SEMI,
-                            s => {
-                                let parsed_chars: Vec<char> = s
-                                    .escape_default()
-                                    .collect();
-                                if s.len() == 1     { CHAR(parsed_chars[0]); }
-                                else if s.len() > 9 { CHAR(parsed_chars[6]); }
-                                panic!("Unrecognized Token");
+            let words: Vec<String> = fs::read_to_string(path)
+                .expect("File Doesn't Exist")
+                .replace(' ', "")
+                .replace('\n', "")
+                .split(',')
+                .map(|s| s.to_string())
+                .collect();
+            for word in words {
+                let token = match word.as_str() {
+                    "STAR" | "OP(STAR)"         => OP(STAR),
+                    "PLUS" | "OP(PLUS)"         => OP(PLUS),
+                    "QUESTION" | "OP(QUESTION)" => OP(QUESTION),
+                    "BAR" | "OP(BAR)"           => OP(BAR),
+                    "DASH" | "OP(DASH)"         => OP(DASH),
+                    "AND" | "OP(AND)"           => OP(AND),
+                    "DBQ" | "GROUP(DBQ)"        => GROUP(DBQ),
+                    "LBR" | "GROUP(LBR)"        => GROUP(LBR),
+                    "RBR" | "GROUP(RBR)"        => GROUP(RBR),
+                    "LCR" | "GROUP(LCR)"        => GROUP(LCR),
+                    "RCR" | "GROUP(RCR)"        => GROUP(RCR),
+                    "LPR" | "GROUP(LPR)"        => GROUP(LPR),
+                    "RPR" | "GROUP(RPR)"        => GROUP(RPR),
+                    ";" | "SEMI"                => SEMI,
+                    "EOF"                       => EOF,
+                    "CHAR('')"                  => CHAR(' '),   // edge case
+                    s => {
+                        let res: Token;
+                        let parsed_chars: Vec<char> = s.chars().collect();
+                        if s.len() == 1      { res = CHAR(parsed_chars[0]); }
+                        else if s.len() >= 9 {
+                            if parsed_chars[6] == '\\' {
+                                match parsed_chars[7] {
+                                    'n'  => res = CHAR('\n'),
+                                    't'  => res = CHAR('\t'),
+                                    'r'  => res = CHAR('\r'),
+                                    '\\' | ']' | '[' | ')' | '(' |
+                                    '-' | '*' | ';' | '+' | '"' | '\'' => {
+                                        res = CHAR(parsed_chars[7]);
+                                    }
+                                    _ => panic!("Unrecognized Token")
+                                }
+                            } else {
+                                res = CHAR(parsed_chars[6]);
                             }
-                        };
-                        tokens.push(token);
-                    }       
-                }
+                        }
+                        else {
+                            println!("{}", s.len());
+                            panic!("Unrecognized Token: {}", s);
+                        }
+                        res
+                    }
+                };
+                tokens.push(token);
             }
             return TokenReader { pos: 0, tokens };
         }
@@ -254,38 +275,59 @@ mod tests {
     impl TokenGiver for TokenReader {
         fn next(&mut self) -> Result<Token, TokenErr> {
             self.pos += 1; 
+            //println!("Token: {:?}", self.tokens[(self.pos - 1) as usize]);
             return Ok(self.tokens[(self.pos - 1) as usize]);
         }
     }
 
     #[test]
     fn test_parser() {
-        // figure out why I need to_owned() here.
-        let in_path = "./test_data/parser/input";
-        let out_path = "./test_data/parser/output";
-        if let Ok(entries) = fs::read_dir(in_path) {
+        let path = "src/test_data/parser/".to_string();
+        if let Ok(entries) = fs::read_dir(format!("{path}/input")) {
             for entry in entries {
                 if entry.is_err() { panic!("Invalid Directory"); }
                 let os_str = entry.unwrap().file_name();
                 let file_name = os_str.to_str().unwrap();
-                let ident = file_name.split("_").next().expect("Filename should have non-zero length.");
-                match ident {
-                    "right" | "wrong" => assert!(
-                        valid_invalid(
-                            format!("{}/{:?}", in_path, file_name),
-                            ident
-                        )
-                    ),
+                let ident = file_name
+                    .trim()
+                    .replace('\n', "")
+                    .split("-")
+                    .map(|s| s.to_string())
+                    .nth(0)
+                    .expect("Filename should have non-zero length");
+                match ident.as_str() {
+                    "rightnp" | "wrongnp" => assert!(right_wrongnp(
+                        format!("{path}/input/{file_name}"),
+                        ident
+                    )),
+                    "AST" => assert!(AST(
+                        format!("{path}/input/{file_name}"),
+                        format!("{path}/output/{file_name}")
+                    )),
                     _ => ()
                 }
             }
         }
     }
 
-    fn valid_invalid(path: String, ans: &str) -> bool {
+    fn right_wrongnp(path: String, ans: String) -> bool {
         let tr = TokenReader::new(path);
         let mut parser = Parser::new(tr).expect("Invalid Token Stream");
         let matches = parser.parse();
-        return !matches.is_err() == ("right" == ans);
+        match matches {
+            Ok(_) => return "rightnp" == ans,
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return "wrongnp" == ans
+            }
+        }
+    }
+
+    fn AST(inpath: String, outpath: String) -> bool {
+        let tr = Lexer::new(&inpath).expect("File Doesn't Exist");
+        let mut parser = Parser::new(tr).expect("Invalid Token Stream");
+        let matches = parser.parse().expect("Expression should be valid.");
+        for m in matches { m.print(); }
+        return true;
     }
 }

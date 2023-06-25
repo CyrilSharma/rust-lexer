@@ -1,0 +1,7 @@
+DBQ, w,h,i,l,e, DBQ,    W,H,I,L,E, SEMI,
+DBQ, f,o,r, DBQ,        F,O,R, SEMI,
+DBQ, (, DBQ,            L,P,A,R, SEMI,
+DBQ, ), DBQ,            R,P,A,R, SEMI,
+DBQ, LBR, a, DASH, z, A, DASH, Z, RBR, LPR, LBR, a, DASH, z, A, DASH, Z, RBR, LBR, 0, DASH, 9, RBR, RPR, STAR, DBQ,
+                        I,D,E,N,T, SEMI,
+EOF

@@ -109,7 +109,7 @@ impl TokenGiver for Lexer {
                             't'  => return Ok(CHAR('\t')),
                             'r'  => return Ok(CHAR('\r')),
                             '\\' | ']' | '[' | ')' | '(' |
-                            '-' | '*' | ';' | '+' | '"' => {
+                            '-' | '*' | ';' | '+' | '"' | '\'' => {
                                 if self.enclosed { return Ok(CHAR(c)); }
                                 else { return Err(TokenErr::InvalidExpr); }
                             },
@@ -128,21 +128,65 @@ impl TokenGiver for Lexer {
 // Figure out how to test this...
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::fs;
+    
     #[test]
+    fn test_lexer() {
+        // figure out why I need to_owned() here.
+        let in_path = "src/test_data/lexer/input";
+        let out_path = "src/test_data/lexer/output";
+        if let Ok(entries) = fs::read_dir(in_path) {
+            for entry in entries {
+                if entry.is_err() { panic!("Invalid Directory"); }
+                let os_str = entry.unwrap().file_name();
+                let file_name = os_str.to_str().unwrap();
+                let ident = file_name
+                    .trim()
+                    .replace('\n', "")
+                    .split("-")
+                    .map(|s| s.to_string())
+                    .nth(0)
+                    .expect("Filename should have non-zero length");
+                match ident.as_str() {
+                    "right" | "wrong" => assert!(
+                        right_wrong(
+                            format!("{}/{}", in_path, file_name),
+                            ident
+                        )
+                    ),
+                    _ => ()
+                }
+            }
+        }
+    }
+
+    fn right_wrong(path: String, ans: String) -> bool {
+        let mut lx = Lexer::new(&path).expect("File wasn't found.");
+        loop { match lx.next() {
+            Ok(tk) => {
+                //println!("{:?},", tk);
+                if tk == EOF { break }
+            },
+            Err(tk) => {
+                //println!("{:?}", tk);
+                return "wrong" == ans;
+            }
+        }}
+        return "right" == ans;
+    }
+
     // Add -- --nocapture to see output.
     fn inspection() {
         use super::*;
         let mut lx = Lexer::new("src/example.tk").expect("File not found.");
-        loop {
-            match lx.next() {
-                Ok(tk) => {
-                    println!("{:?}", tk);
-                    if tk == EOF { break }
-                },
-                Err(tk) => println!("{:?}", tk),
-            }
-            
-        }
-        assert_eq!(4, 4);
+        loop { match lx.next() {
+            Ok(tk) => {
+                println!("{:?}", tk);
+                if tk == EOF { break }
+            },
+            Err(tk) => println!("{:?}", tk)
+        }}
+        assert!(true);
     }
 }

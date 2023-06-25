@@ -1,0 +1,8 @@
+"(abc)*(ab)+b"      ; #HEEEHEEE
+#OOGIEBOOGIE WOOGIE NOOGIE
+"OOGA BOOGA"        ; #OOGIEBOOGIE WOOGIE NOOGIE
+"b*b*b*b*b*b*"      ;
+#OOGIEBOOGIE WOOGIE NOOGIE
+"\[\]*\)+\(*\)?"    ; 
+#OOGIEBOOGIE WOOGIE NOOGIE
+"IT'S A ME"         COOL;
