@@ -22,6 +22,10 @@ pub struct Match {
     pub name: Option<String>
 }
 impl Node {
+    pub fn char(&self) -> char {
+        if let Node::Char(c) = *self { return c; }
+        panic!("Not A Letter!");
+    }
     pub fn print(&self) {
         print!("{}", self.to_string());
     }
