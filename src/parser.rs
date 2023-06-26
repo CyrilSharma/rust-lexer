@@ -1,5 +1,5 @@
 use crate::lexer::{TokenGiver, Token, TokenErr, Group, Op};
-use crate::ast::{Node, BinaryExprNode, UnaryExprNode, AST};
+use crate::ast::{Node, BinaryExprNode, UnaryExprNode, Match};
 use Token::*;
 use Group::*;
 use Op::*;
@@ -46,7 +46,7 @@ impl<T: TokenGiver> Parser<T> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<AST>, ParseError> {
+    pub fn parse(&mut self) -> Result<Vec<Match>, ParseError> {
         let mut matches = Vec::new();
         while let GROUP(DBQ) = self.cur {
             self.consume(GROUP(DBQ), "Parse")?;
@@ -54,10 +54,10 @@ impl<T: TokenGiver> Parser<T> {
             self.consume(GROUP(DBQ), "Parse")?;
             if let SEMI = self.cur {
                 self.consume(SEMI, "Parse")?;
-                matches.push(AST { root, name: None });
+                matches.push(Match { root, name: None });
             } else { 
                 let name = self.name()?; 
-                matches.push(AST { root, name: Some(name) });
+                matches.push(Match { root, name: Some(name) });
             }
         }
         if self.cur != EOF { 
@@ -327,10 +327,10 @@ mod tests {
         let matches = parser.parse().expect("Expression should be valid.");
         for m in matches { 
             let ans: String = fs::read_to_string(&outpath).expect("File doesn't exist.");
-            if ans.trim() != m.to_string().trim() { 
+            if ans.trim() != m.root.to_string().trim() { 
                 println!("{}", ans.trim());
                 println!("________________");
-                println!("{}", m.to_string().trim());
+                println!("{}", m.root.to_string().trim());
                 return false; 
             }
             //m.print(); 

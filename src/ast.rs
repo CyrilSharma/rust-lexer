@@ -17,18 +17,18 @@ pub struct UnaryExprNode {
     pub op: Op,
 }
 
-pub struct AST {
+pub struct Match {
     pub root: Node,
     pub name: Option<String>
 }
-impl AST {
+impl Node {
     pub fn print(&self) {
         print!("{}", self.to_string());
     }
 
     pub fn to_string(&self) -> String {
         let mut out = String::new();
-        self._print(&self.root, 0, &mut out);
+        self._print(&self, 0, &mut out);
         return out;
     } 
 
