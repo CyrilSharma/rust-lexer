@@ -1,28 +1,29 @@
+use crate::{ast, lexer};
+use typed_arena::Arena;
 /* I got the idea for Arenas from here - 
  * https://github.com/nrc/r4cppp/blob/master/graphs/README.md 
  */
-use crate::{ast, lexer};
-use typed_arena::Arena;
 
 struct Node {
     jumps: Vec<*mut Node>,
     eps_jumps: Vec<*mut Node>,
     accept: Option<String>,
 }
+/* TODO: some functionality for iterating over and generating DFA */
 impl Node {
-    pub fn add(from: *mut Node, c: char, to: *mut Node) {
+    fn add(from: *mut Node, c: char, to: *mut Node) {
         unsafe { (*from).jumps[c as usize] = to; }
     }
-    pub fn add_eps(from: *mut Node, to: *mut Node) {
+    fn add_eps(from: *mut Node, to: *mut Node) {
         unsafe { (*from).eps_jumps.push(to); }
     }
-    pub fn copy_from(src: *mut Node, dest: *mut Node) {
+    fn copy_from(src: *mut Node, dest: *mut Node) {
         unsafe {
             std::mem::swap(&mut(*dest).jumps, &mut(*src).jumps);
             std::mem::swap(&mut(*dest).eps_jumps, &mut(*src).eps_jumps);
         }
     }
-    pub fn label(from: *mut Node, label: Option<String>) {
+    fn label(from: *mut Node, label: Option<String>) {
         unsafe { (*from).accept = label; }
     }
 }
@@ -156,6 +157,3 @@ impl NFA {
         return node as *mut Node;
     }
 }
-
-
-
