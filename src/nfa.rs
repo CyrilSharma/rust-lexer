@@ -3,14 +3,26 @@ use typed_arena::Arena;
 /* I got the idea for Arenas from here - 
  * https://github.com/nrc/r4cppp/blob/master/graphs/README.md 
  */
-
-struct Node {
+pub struct Node {
+    pub id: usize,
     jumps: Vec<*mut Node>,
     eps_jumps: Vec<*mut Node>,
-    accept: Option<String>,
+    accept: usize,
 }
 /* TODO: some functionality for iterating over and generating DFA */
 impl Node {
+    pub fn accepts(node: *mut Node) -> usize {
+        unsafe { return (*node).accept; }
+    }
+    pub fn id(node: *mut Node) -> usize {
+        unsafe { return (*node).id; }
+    }
+    pub fn eps(node: *mut Node) -> Vec<*mut Node> {
+        unsafe { return (*node).eps_jumps; }
+    }
+    pub fn mv(node: *mut Node, c: char) -> *mut Node {
+        unsafe { return (*node).jumps[c as usize]; }
+    }
     fn add(from: *mut Node, c: char, to: *mut Node) {
         unsafe { (*from).jumps[c as usize] = to; }
     }
@@ -23,19 +35,23 @@ impl Node {
             std::mem::swap(&mut(*dest).eps_jumps, &mut(*src).eps_jumps);
         }
     }
-    fn label(from: *mut Node, label: Option<String>) {
+    fn label(from: *mut Node, label: usize) {
         unsafe { (*from).accept = label; }
     }
 }
 pub struct NFA { 
+    pub ncount: usize,
     arena: Arena<Node>,
-    start: *mut Node, 
+    pub start: *mut Node,
+    pub labels: Vec<Option<String>>
 }
 impl NFA {
     pub fn new() -> Self {
         return NFA { 
+            ncount: 0,
             arena: Arena::new(),
             start: std::ptr::null_mut(),
+            labels: Vec::new()
         };
     }
 
@@ -52,7 +68,8 @@ impl NFA {
 
     fn build_ast(&mut self, ast: &ast::Node, label: Option<String>) -> *mut Node {
         let (start, end) = self.build(ast);
-        Node::label(end, label);
+        Node::label(end, self.labels.len() + 1);
+        self.labels.push(label);
         return start;
     }
 
@@ -150,10 +167,12 @@ impl NFA {
 
     fn make_node(&self) -> *mut Node {
         let node = self.arena.alloc(Node {
+            id: self.ncount,
             jumps: vec![std::ptr::null_mut(); 128],
             eps_jumps: Vec::new(),
             accept: None,
         });
+        self.ncount += 1;
         return node as *mut Node;
     }
 }
