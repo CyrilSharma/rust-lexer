@@ -1,30 +1,8 @@
-MATCH  => [ EXPR ] WORD;
-MATCH  => [ EXPR ] ;
-
-
-# EXPR   => (EXPR|EXPR) | [DASH*] | EXPR+ | EXPR* | CHAR
-
+MATCH        => [ EXPR ] WORD;
+MATCH        => [ EXPR ] ;
 EXPR         => TERM ('|' TERM)*
 TERM         => FACTOR*
 FACTOR       => ATOM ('*' | '+' | '?')?
 ATOM         => CHAR | '(' EXPR ')' | DASH
 DASH         => [ RANGE* ]
 RANGE        => a-z, 0-9...
-
-EXPR   => FACTOR EXPR | FACTOR+ | FACTOR*
-FACTOR => [DASHES] | CHAR(QUANTIFIER|EPS) | (EXPR)
-DASH   => DIGIT-DIGIT | LETTER-LETTER                     # a-z 0-9
-
-
-# EXPR   => (EXPR|EXPR) | [DASH*] | EXPR+ | EXPR* | CHAR
-# EXPR   => (EXPR1|EXPR) | EXPR1EXPR
-# EXPR1  => EXPR2 | (EXPR2) | (EXPR2)+ | (EXPR2)*           # ([a-z]a*) | ([a-z]a*)* | ([a-z]a*)+ | [a-z]a*
-# EXPR2  => [DASHES]EXPR3 | CHAR(*|+|EPS)EXPR3              # [a-zA-Z0-9]ab*a+c[a-c]
-# DASH   => DIGIT-DIGIT | LETTER-LETTER                     # a-z 0-9
-
-
-
-EXPR   => (EXPR)_EXPR | {EXPR}_EXPR | DASH_EXPR | CHAR_EXPR           # Disambiguate with lookahead.
-_EXPR  => +_EXPR | *_EXPR | |_EXPREXPR | CHAR_EXPR | EPS
-DASH   => DIGIT-DIGIT | LETTER-LETTER
-WORD   => CHAR WORD

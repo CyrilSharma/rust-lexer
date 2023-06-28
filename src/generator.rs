@@ -1,1 +1,1 @@
-use crate::dfa::{DFA};
+use crate::nfa::{NFA};
