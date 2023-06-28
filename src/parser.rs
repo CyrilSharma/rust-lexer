@@ -52,13 +52,8 @@ impl<T: TokenGiver> Parser<T> {
             self.consume(GROUP(DBQ), "Parse")?;
             let root = self.expr()?;
             self.consume(GROUP(DBQ), "Parse")?;
-            if let SEMI = self.cur {
-                self.consume(SEMI, "Parse")?;
-                matches.push(Match { root, name: None });
-            } else { 
-                let name = self.name()?; 
-                matches.push(Match { root, name: Some(name) });
-            }
+            let name = self.name()?; 
+            matches.push(Match { root, name: name });
         }
         if self.cur != EOF { 
             return Err(ParseError::Parse(

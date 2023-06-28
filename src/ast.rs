@@ -19,7 +19,7 @@ pub struct UnaryExprNode {
 
 pub struct Match {
     pub root: Node,
-    pub name: Option<String>
+    pub name: String
 }
 impl Node {
     pub fn char(&self) -> char {
