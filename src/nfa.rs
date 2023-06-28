@@ -22,9 +22,10 @@ impl NFA {
     pub fn from_matches(&mut self, matches: &Vec<ast::Match>) {
         let root = self.make_node();
         for m in matches {
+            let node = self.build_ast(&m.root, m.name.to_string());
             self.add_eps(
                 root,
-                self.build_ast(&m.root, m.name)
+                node
             );
         }
     }
@@ -45,7 +46,7 @@ impl NFA {
                 match node.op {
                     lexer::Op::BAR => self.handle_bar(left, right),
                     lexer::Op::PLUS => self.handle_dash(node.left.char(), node.right.char()),
-                    lexer::Op::AND => self.handleAdd(left, right),
+                    lexer::Op::AND => self.handle_add(left, right),
                     _ => panic!("Expected Binary Op but got {:?}", node.op)
                 }
             },
@@ -64,8 +65,8 @@ impl NFA {
 
     fn handle_bar(&mut self, left: (usize, usize),
         right: (usize, usize)) -> (usize, usize) {
-        let mut i = self.make_node();
-        let mut f = self.make_node();
+        let i = self.make_node();
+        let f = self.make_node();
         self.add_eps(i, left.0);
         self.add_eps(i, right.0);
         self.add_eps(left.1, f);
@@ -82,12 +83,19 @@ impl NFA {
         return (i, f);
     }
 
-    fn handleAdd(&mut self, left: (usize, usize), right: (usize, usize)) 
+    fn handle_add(&mut self, left: (usize, usize), right: (usize, usize)) 
         -> (usize, usize) {
         let (_, lf) = left;
         let (ri, _) = right;
-        self.nodes[lf].jumps = self.nodes[ri].jumps;
-        self.nodes[lf].eps = self.nodes[ri].eps;
+        
+        let jumptemp = self.nodes[lf].jumps.clone();
+        self.nodes[lf].jumps = self.nodes[ri].jumps.clone();
+        self.nodes[ri].jumps = jumptemp;
+
+        let epstemp = self.nodes[lf].eps.clone();
+        self.nodes[lf].eps = self.nodes[ri].eps.clone();
+        self.nodes[ri].eps = epstemp;
+
         return (left.0, right.1);
     }
 
@@ -101,7 +109,7 @@ impl NFA {
         return (i, f);
     }
 
-    fn handle_plus(&self, child: (usize, usize)) -> (usize, usize) {
+    fn handle_plus(&mut self, child: (usize, usize)) -> (usize, usize) {
         let (start, end) = child;
         let i = self.make_node();
         let f = self.make_node();
@@ -111,7 +119,7 @@ impl NFA {
         return (i, f);
     }
 
-    fn handle_star(&self, child: (usize, usize)) -> (usize, usize) {
+    fn handle_star(&mut self, child: (usize, usize)) -> (usize, usize) {
         let (start, end) = child;
         let i = self.make_node();
         let f = self.make_node();
@@ -122,22 +130,22 @@ impl NFA {
         return (i, f);
     }
 
-    fn handle_char<'b>(&'b self, c: char) -> (usize, usize) {
+    fn handle_char(&mut self, c: char) -> (usize, usize) {
         let i = self.make_node();
         let f = self.make_node();
         self.add(i, f, c);
         return (i, f);
     }
 
-    fn add_eps(&self, i: usize, f: usize) {
+    fn add_eps(&mut self, i: usize, f: usize) {
         self.nodes[i].eps.push(f);
     }
 
-    fn add(&self, i: usize, f: usize, c: char) {
+    fn add(&mut self, i: usize, f: usize, c: char) {
         self.nodes[i].jumps[c as usize] = f;
     }
 
-    fn make_node(&self) -> usize {
+    fn make_node(&mut self) -> usize {
         self.nodes.push(Node {
             id: self.ncount,
             jumps: Vec::new(),
