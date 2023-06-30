@@ -1,10 +1,10 @@
 use crate::{ast, lexer};
 pub struct NFA { 
-    pub ncount: usize,
-    pub jumps: Vec<Vec<usize>>,
-    pub eps: Vec<Vec<usize>>,
+    pub ncount:  usize,
+    pub jumps:   Vec<Vec<usize>>,
+    pub eps:     Vec<Vec<usize>>,
     pub accepts: Vec<usize>,
-    pub labels: Vec<String>
+    pub labels:  Vec<String>
 }
 impl NFA {
     pub fn new() -> Self {

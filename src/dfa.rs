@@ -1,18 +1,18 @@
 use crate::nfa::{NFA};
 pub struct DFA {
-    pub ncount: usize,
-    pub jumps: Vec<[usize; 128]>,
+    pub ncount:  usize,
+    pub jumps:   Vec<[usize; 128]>,
     pub accepts: Vec<usize>,
-    pub labels: Vec<String>
+    pub labels:  Vec<String>
 }
 
 impl DFA {
     pub fn new() -> Self {
         return DFA {
-            ncount: 0,
-            jumps: Vec::new(),
+            ncount:  0,
+            jumps:   Vec::new(),
             accepts: Vec::new(),
-            labels: Vec::new()
+            labels:  Vec::new()
         };
     }
 
