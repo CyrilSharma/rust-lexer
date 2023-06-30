@@ -276,6 +276,12 @@ mod tests {
     #[test]
     fn test_parser() {
         let path = "src/test_data/parser".to_string();
+        let tests = &[
+            ("rightnp", ast), 
+            ("wrongnp", ast),
+            ("ast", ast)
+        ];
+        tester::test()
         if let Ok(entries) = fs::read_dir(format!("{path}/input")) {
             for entry in entries {
                 if entry.is_err() { panic!("Invalid Directory"); }
