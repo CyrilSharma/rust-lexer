@@ -1,9 +1,9 @@
 use crate::nfa::{NFA};
-struct DFA {
-    ncount: usize,
-    jumps: Vec<[usize; 128]>,
-    accepts: Vec<usize>,
-    labels: Vec<String>
+pub struct DFA {
+    pub ncount: usize,
+    pub jumps: Vec<[usize; 128]>,
+    pub accepts: Vec<usize>,
+    pub labels: Vec<String>
 }
 
 impl DFA {
@@ -21,13 +21,13 @@ impl DFA {
      * Hashing? (input size may be too small to be effective)
      */
     fn subset_construction(&mut self, nfa: NFA) {
-        let mut Dstates: Vec<Vec<usize>> = Vec::new();
-        Dstates.push(DFA::eps_closure(&nfa, vec![0; 1]));
+        let mut d_states: Vec<Vec<usize>> = Vec::new();
+        d_states.push(DFA::eps_closure(&nfa, vec![0; 1]));
         let mut unmarked = vec![0usize; 1];
         while let Some(index) = unmarked.pop() {
             for c in 0..=127u8 {
                 let mut nxt: Vec<usize> = Vec::new();
-                for d in &Dstates[index] { 
+                for d in &d_states[index] { 
                     nxt.push(nfa.nodes[*d].jumps[c as usize])
                 }
                 let U = DFA::eps_closure(
@@ -35,11 +35,11 @@ impl DFA {
                     nxt,
                 );
                 let mut has = false;
-                for d in &Dstates {
+                for d in &d_states {
                     if *d == U { has = true; }
                 }
                 if has { continue; }
-                Dstates.push(U.clone());
+                d_states.push(U.clone());
                 let u = self.addState();
                 self.jumps[u][c as usize] = index;
                 self.accepts[u] = DFA::accepts(&nfa, U);

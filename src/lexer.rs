@@ -56,7 +56,7 @@ pub enum TokenErr {
 
 pub struct Lexer { 
     chars: Vec<char>,
-    pos: u32,
+    pos: usize,
     enclosed: bool
 }
 
@@ -70,14 +70,14 @@ impl Lexer {
 
     fn nextchar(&mut self) -> char {
         self.pos += 1;
-        return self.chars[(self.pos - 1) as usize];
+        return self.chars[self.pos - 1];
     }
 }
 
 impl TokenGiver for Lexer {
     fn next(&mut self) -> Result<Token, TokenErr> {
         loop {
-            if self.pos == self.chars.len() as u32 { 
+            if self.pos == self.chars.len() { 
                 return Ok(EOF)
             }
             match self.nextchar() {
@@ -97,12 +97,12 @@ impl TokenGiver for Lexer {
                 '+' => return Ok(OP(PLUS)),
                 '|' => return Ok(OP(BAR)),
                 ';' => return Ok(SEMI),
-                '#' => while self.pos < self.chars.len() as u32 {
+                '#' => while self.pos < self.chars.len() {
                     if self.nextchar() == '\n' { break }
                 },
                 other => match other {
                     '\\' => {
-                        if self.pos == (self.chars.len() - 1) as u32 
+                        if self.pos == (self.chars.len() - 1)
                             { return Err(TokenErr::InvalidExpr); }
                         let c = self.nextchar();
                         match c {
