@@ -1,7 +1,7 @@
 use crate::{ast, lexer};
 pub struct NFA { 
     pub ncount:  usize,
-    pub jumps:   Vec<Vec<usize>>,
+    pub jumps:   Vec<[usize; u8::MAX as usize]>,
     pub eps:     Vec<Vec<usize>>,
     pub accepts: Vec<usize>,
     pub labels:  Vec<String>
@@ -123,14 +123,14 @@ impl NFA {
         return (i, f);
     }
 
-    fn swap(&mut self, i: usize, j: usize) {
-        self.jumps.swap(i, j);
-        self.eps.swap(i, j);
-    }
-
     fn label(&mut self, i: usize, label: String) {
         self.labels.push(label);
         self.accepts[i] = self.labels.len();
+    }
+
+    fn swap(&mut self, i: usize, j: usize) {
+        self.jumps.swap(i, j);
+        self.eps.swap(i, j);
     }
 
     fn add_eps(&mut self, i: usize, f: usize) {
@@ -143,7 +143,7 @@ impl NFA {
 
     fn make_node(&mut self) -> usize {
         self.ncount += 1;
-        self.jumps.push(vec![0; usize::MAX]);
+        self.jumps.push([usize::MAX; u8::MAX as usize]);
         self.eps.push(Vec::new());
         return self.ncount - 1;
     }

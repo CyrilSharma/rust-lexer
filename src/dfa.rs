@@ -1,7 +1,7 @@
 use crate::nfa::{NFA};
 pub struct DFA {
     pub ncount:  usize,
-    pub jumps:   Vec<[usize; 128]>,
+    pub jumps:   Vec<[usize; u8::MAX as usize]>,
     pub accepts: Vec<usize>,
     pub labels:  Vec<String>
 }
@@ -16,10 +16,6 @@ impl DFA {
         };
     }
 
-    /* A few optimization can be performed.
-     * Compression into a bit vector.
-     * Hashing? (input size may be too small to be effective)
-     */
     fn subset_construction(&mut self, nfa: NFA) {
         let mut d_states: Vec<Vec<usize>> = Vec::new();
         d_states.push(DFA::eps_closure(&nfa, vec![0; 1]));
@@ -70,7 +66,7 @@ impl DFA {
         for s in T {
             let acc = nfa.accepts[s];
             // TODO: Tiebreaker should be longest matched token, not longest label length.
-            if acc != 0 && nfa.labels[acc].len() > bestLen {
+            if acc != usize::MAX && nfa.labels[acc].len() > bestLen {
                 best = s;
                 bestLen = nfa.labels[acc].len();
             }
@@ -80,7 +76,7 @@ impl DFA {
 
     fn addState(&mut self) -> usize {
         self.ncount += 1;
-        self.jumps.push([0; 128]);
+        self.jumps.push([0; u8::MAX as usize]);
         self.accepts.push(0);
         return self.ncount - 1;
     }
