@@ -28,7 +28,7 @@ impl DFA {
             for c in 0..=127u8 {
                 let mut nxt: Vec<usize> = Vec::new();
                 for d in &d_states[index] { 
-                    nxt.push(nfa.nodes[*d].jumps[c as usize])
+                    nxt.push(nfa.jumps[*d][c as usize])
                 }
                 let U = DFA::eps_closure(
                     &nfa,
@@ -54,9 +54,9 @@ impl DFA {
         let mut stack: Vec<usize> = Vec::new();
         for s in &closure { stack.push(*s); }
         while let Some(s) = stack.pop() {
-            for nbr in &nfa.nodes[s].eps {
+            for nbr in &nfa.eps[s] {
                 if has[*nbr] { continue; }
-                has[nfa.nodes[*nbr].id] = true;
+                has[*nbr] = true;
                 closure.push(*nbr);
                 stack.push(*nbr);
             }
@@ -68,7 +68,8 @@ impl DFA {
         let mut best: usize = 0;
         let mut bestLen: usize = 0;
         for s in T {
-            let acc = nfa.nodes[s].accept;
+            let acc = nfa.accepts[s];
+            // TODO: Tiebreaker should be longest matched token, not longest label length.
             if acc != 0 && nfa.labels[acc].len() > bestLen {
                 best = s;
                 bestLen = nfa.labels[acc].len();

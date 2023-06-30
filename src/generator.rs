@@ -17,7 +17,7 @@ impl<'a> Generator<'a> {
         });
     }
 
-    fn generate(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
         writeln!(self.file, "#[derive(Copy, Clone, Debug, PartialEq, Eq)]")?;
         writeln!(self.file, "pub enum Token {{")?;
         for label in &self.dfa.labels {
@@ -127,3 +127,5 @@ impl<'a> Generator<'a> {
         return Ok(());
     }
 }
+
+/* TODO - Lexing Testcases... */

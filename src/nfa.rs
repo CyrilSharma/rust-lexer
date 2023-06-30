@@ -1,21 +1,19 @@
 use crate::{ast, lexer};
-pub struct Node {
-    pub id: usize,
-    pub jumps: Vec<usize>,
-    pub eps: Vec<usize>,
-    pub accept: usize,
-}
 pub struct NFA { 
     pub ncount: usize,
-    pub nodes: Vec<Node>,
+    pub jumps: Vec<Vec<usize>>,
+    pub eps: Vec<Vec<usize>>,
+    pub accepts: Vec<usize>,
     pub labels: Vec<String>
 }
 impl NFA {
     pub fn new() -> Self {
         return NFA { 
-            ncount: 0,
-            nodes: Vec::new(),
-            labels: Vec::new()
+            ncount:  0,
+            jumps:   Vec::new(),
+            eps:     Vec::new(),
+            accepts: Vec::new(),
+            labels:  Vec::new()
         };
     }
 
@@ -23,17 +21,13 @@ impl NFA {
         let root = self.make_node();
         for m in matches {
             let node = self.build_ast(&m.root, m.name.to_string());
-            self.add_eps(
-                root,
-                node
-            );
+            self.add_eps(root,node);
         }
     }
 
     fn build_ast(&mut self, ast: &ast::Node, label: String) -> usize {
         let (start, end) = self.build(ast);
-        self.labels.push(label);
-        self.nodes[end].accept = self.labels.len();
+        self.label(end, label);
         return start;
     }
 
@@ -87,15 +81,7 @@ impl NFA {
         -> (usize, usize) {
         let (_, lf) = left;
         let (ri, _) = right;
-        
-        let jumptemp = self.nodes[lf].jumps.clone();
-        self.nodes[lf].jumps = self.nodes[ri].jumps.clone();
-        self.nodes[ri].jumps = jumptemp;
-
-        let epstemp = self.nodes[lf].eps.clone();
-        self.nodes[lf].eps = self.nodes[ri].eps.clone();
-        self.nodes[ri].eps = epstemp;
-
+        self.swap(lf, ri);
         return (left.0, right.1);
     }
 
@@ -137,22 +123,28 @@ impl NFA {
         return (i, f);
     }
 
+    fn swap(&mut self, i: usize, j: usize) {
+        self.jumps.swap(i, j);
+        self.eps.swap(i, j);
+    }
+
+    fn label(&mut self, i: usize, label: String) {
+        self.labels.push(label);
+        self.accepts[i] = self.labels.len();
+    }
+
     fn add_eps(&mut self, i: usize, f: usize) {
-        self.nodes[i].eps.push(f);
+        self.eps[i].push(f);
     }
 
     fn add(&mut self, i: usize, f: usize, c: char) {
-        self.nodes[i].jumps[c as usize] = f;
+        self.jumps[i][c as usize] = f;
     }
 
     fn make_node(&mut self) -> usize {
-        self.nodes.push(Node {
-            id: self.ncount,
-            jumps: Vec::new(),
-            eps: Vec::new(),
-            accept: 0,
-        });
         self.ncount += 1;
+        self.jumps.push(vec![0; usize::MAX]);
+        self.eps.push(Vec::new());
         return self.ncount - 1;
     }
 }
