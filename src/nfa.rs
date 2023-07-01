@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_matches() {
-        let path = "tests/data/nfa/input";
+        let path = "tests/data/regex/input";
         let mut i = 0;
         while Path::new(&format!("{path}/match-{i}.txt")).exists() {
             println!("{}", format!("{path}/match-{i}.txt"));
