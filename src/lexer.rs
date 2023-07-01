@@ -130,50 +130,29 @@ impl TokenGiver for Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    
+    use std::{path::Path};
+
     #[test]
-    fn test_lexer() {
-        // figure out why I need to_owned() here.
-        let in_path = "src/test_data/lexer/input";
-        if let Ok(entries) = fs::read_dir(in_path) {
-            for entry in entries {
-                if entry.is_err() { panic!("Invalid Directory"); }
-                let os_str = entry.unwrap().file_name();
-                let file_name = os_str.to_str().unwrap();
-                let ident = file_name
-                    .trim()
-                    .replace('\n', "")
-                    .split("-")
-                    .map(|s| s.to_string())
-                    .nth(0)
-                    .expect("Filename should have non-zero length");
-                match ident.as_str() {
-                    "right" | "wrong" => assert!(
-                        right_wrong(
-                            format!("{}/{}", in_path, file_name),
-                            ident
-                        )
-                    ),
-                    _ => ()
-                }
+    fn right_wrong() {
+        let path = "tests/data/parser/input/";
+        for id in ["right", "wrong"] {
+            let mut i = 0;
+            while Path::new(&format!("{path}/{id}-{i}")).exists() {
+                let mut lx = Lexer::new(&path).expect("File wasn't found.");
+                loop { match lx.next() {
+                    Ok(tk) => {
+                        if tk != EOF { continue; }
+                        assert!("right" == id);
+                        break;
+                    },
+                    Err(tk) => {
+                        println!("{:?}", tk);
+                        assert!("wrong" == id);
+                    }
+                }}
+                i += 1;
             }
         }
-    }
-
-    fn right_wrong(path: String, ans: String) -> bool {
-        let mut lx = Lexer::new(&path).expect("File wasn't found.");
-        loop { match lx.next() {
-            Ok(tk) => {
-                //println!("{:?},", tk);
-                if tk == EOF { break }
-            },
-            Err(tk) => {
-                println!("{:?}", tk);
-                return "wrong" == ans;
-            }
-        }}
-        return "right" == ans;
     }
 
     // Add -- --nocapture to see output.

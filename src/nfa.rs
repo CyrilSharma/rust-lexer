@@ -17,7 +17,7 @@ impl NFA {
         };
     }
 
-    pub fn from_matches(&mut self, matches: &Vec<ast::Match>) {
+    pub fn build_from_matches(&mut self, matches: &Vec<ast::Match>) {
         let root = self.make_node();
         for m in matches {
             let node = self.build_ast(&m.root, m.name.to_string());
@@ -38,17 +38,17 @@ impl NFA {
                 let left = self.build(&node.left);
                 let right = self.build(&node.right);
                 match node.op {
-                    lexer::Op::BAR => self.handle_bar(left, right),
+                    lexer::Op::BAR  => self.handle_bar(left, right),
                     lexer::Op::PLUS => self.handle_dash(node.left.char(), node.right.char()),
-                    lexer::Op::AND => self.handle_add(left, right),
+                    lexer::Op::AND  => self.handle_add(left, right),
                     _ => panic!("Expected Binary Op but got {:?}", node.op)
                 }
             },
             ast::Node::UnaryExpr(node) => {
                 let child = self.build(&node.child);
                 match node.op {
-                    lexer::Op::STAR => self.handle_star(child),
-                    lexer::Op::PLUS => self.handle_plus(child),
+                    lexer::Op::STAR     => self.handle_star(child),
+                    lexer::Op::PLUS     => self.handle_plus(child),
                     lexer::Op::QUESTION => self.handle_question(child),
                     _ => panic!("Expected Unary Op but got {:?}", node.op)
                 }
@@ -146,5 +146,53 @@ impl NFA {
         self.jumps.push([usize::MAX; u8::MAX as usize]);
         self.eps.push(Vec::new());
         return self.ncount - 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{path::Path, fs::File, io::{BufReader, BufRead}};
+
+    use crate::{lexer::Lexer, parser::Parser};
+
+    use super::*;
+    impl NFA {
+        fn accepts(&self, s: &str) -> bool {
+            let mut chars = s.chars().peekable();
+            let mut stk = vec![(0usize, chars.next().expect("Should have at least one character.")); 1];
+            while let Some((state, c) ) = stk.pop() {
+                if let Some(d) = chars.peek() {
+                    stk.push((self.jumps[state][c as usize], *d));
+                    for item in &self.eps[state] {
+                        stk.push((*item, *d))
+                    }
+                } else if self.accepts[state] != 0 {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    #[test]
+    fn test_matches() {
+        let path = "tests/data/nfa";
+        let mut i = 0;
+        let filepath = format!("{path}/match-{i}");
+        while Path::new(&filepath).exists() {
+            let mut lexer = Lexer::new(&filepath).expect("Invalid Path");
+            let mut parser = Parser::new(lexer).expect("File should be non-empty!");
+            let mut nfa = NFA::new();
+            nfa.build_from_matches(&parser.parse().expect("Invalid parse"));
+            for id in ["right", "wrong"] {
+                let file = File::open(&format!("{path}/{id}-words-{i}")).expect("Should be valid...");
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    if let Ok(word) = line {
+                        assert!(nfa.accepts(&word) == (id == "right"));
+                    }
+                }
+            }
+        }
     }
 }

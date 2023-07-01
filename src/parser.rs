@@ -202,7 +202,7 @@ impl<T: TokenGiver> Parser<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    use std::{fs, path::Path};
     use crate::lexer::Lexer;
     struct TokenReader { pos: u32, tokens: Vec<Token> } 
     impl TokenReader {
@@ -274,68 +274,35 @@ mod tests {
     }
 
     #[test]
-    fn test_parser() {
-        let path = "src/test_data/parser".to_string();
-        let tests = &[
-            ("rightnp", ast), 
-            ("wrongnp", ast),
-            ("ast", ast)
-        ];
-        tester::test()
-        if let Ok(entries) = fs::read_dir(format!("{path}/input")) {
-            for entry in entries {
-                if entry.is_err() { panic!("Invalid Directory"); }
-                let os_str = entry.unwrap().file_name();
-                let file_name = os_str.to_str().unwrap();
-                let ident = file_name
-                    .trim()
-                    .replace('\n', "")
-                    .split("-")
-                    .map(|s| s.to_string())
-                    .nth(0)
-                    .expect("Filename should have non-zero length");
-                match ident.as_str() {
-                    "rightnp" | "wrongnp" => assert!(right_wrongnp(
-                        format!("{path}/input/{file_name}"),
-                        ident
-                    )),
-                    "AST" => assert!(ast(
-                        format!("{path}/input/{file_name}"),
-                        format!("{path}/output/{file_name}")
-                    )),
-                    _ => ()
-                }
+    fn right_wrong() {
+        let path = "tests/data/parser/input/";
+        for id in ["right", "wrong"] {
+            let mut i = 0;
+            while Path::new(&format!("{path}/{id}-{i}.txt")).exists() {
+                let tr = TokenReader::new(format!("{path}/rightnp-{i}"));
+                let mut parser = Parser::new(tr).expect("Invalid Token Stream");
+                let matches = parser.parse();
+                assert!(id == "right" && !matches.is_err());
+                i += 1
             }
         }
     }
 
-    fn right_wrongnp(path: String, ans: String) -> bool {
-        let tr = TokenReader::new(path);
-        let mut parser = Parser::new(tr).expect("Invalid Token Stream");
-        let matches = parser.parse();
-        match matches {
-            Ok(_) => return "rightnp" == ans,
-            Err(e) => {
-                println!("Error: {:?}", e);
-                return "wrongnp" == ans
-            }
-        }
-    }
+    #[test]
+    fn ast() {
+        let inpath = "tests/data/parser/input/";
+        let outpath = "tests/data/parser/output/";
 
-    fn ast(inpath: String, outpath: String) -> bool {
-        let tr = Lexer::new(&inpath).expect("File Doesn't Exist");
-        let mut parser = Parser::new(tr).expect("Invalid Token Stream");
-        let matches = parser.parse().expect("Expression should be valid.");
-        for m in matches { 
-            let ans: String = fs::read_to_string(&outpath).expect("File doesn't exist.");
-            if ans.trim() != m.root.to_string().trim() { 
-                println!("{}", ans.trim());
-                println!("________________");
-                println!("{}", m.root.to_string().trim());
-                return false; 
+        let mut i = 0;
+        while Path::new(&format!("{inpath}/ast-{i}")).exists() {
+            let tr = Lexer::new(inpath).expect("File Doesn't Exist");
+            let mut parser = Parser::new(tr).expect("Invalid Token Stream");
+            let matches = parser.parse().expect("Expression should be valid.");
+            for m in matches { 
+                let ans: String = fs::read_to_string(outpath).expect("File doesn't exist.");
+                assert!(ans.trim() != m.root.to_string().trim());
             }
-            //m.print(); 
+            i += 1;
         }
-        return true;
     }
 }

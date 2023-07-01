@@ -81,3 +81,9 @@ impl DFA {
         return self.ncount - 1;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn thing() {}
+}
