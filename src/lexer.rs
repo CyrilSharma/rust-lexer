@@ -134,11 +134,11 @@ mod tests {
 
     #[test]
     fn right_wrong() {
-        let path = "tests/data/parser/input/";
+        let path = "tests/data/lexer/input";
         for id in ["right", "wrong"] {
             let mut i = 0;
-            while Path::new(&format!("{path}/{id}-{i}")).exists() {
-                let mut lx = Lexer::new(&path).expect("File wasn't found.");
+            while Path::new(&format!("{path}/{id}-{i}.txt")).exists() {
+                let mut lx = Lexer::new(&format!("{path}/{id}-{i}.txt")).unwrap();
                 loop { match lx.next() {
                     Ok(tk) => {
                         if tk != EOF { continue; }

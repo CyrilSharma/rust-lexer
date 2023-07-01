@@ -6,6 +6,7 @@ pub struct DFA {
     pub labels:  Vec<String>
 }
 
+#[allow(dead_code)]
 impl DFA {
     pub fn new() -> Self {
         return DFA {

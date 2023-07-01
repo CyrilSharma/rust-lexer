@@ -1,0 +1,6 @@
+"while"                       WHILE;
+"for"                         FOR;
+"\("                          LPAR;
+"\)"                          RPAR;
+"[a-zA-Z]([a-zA-Z]|[0-9])*"   IDENT;
+"[0-9]*.[0-9]+"               FLOAT;

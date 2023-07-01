@@ -8,6 +8,7 @@ struct Generator<'a> {
     tabs: String
 }
 
+#[allow(dead_code)]
 impl<'a> Generator<'a> {
     pub fn new(dfa: &'a DFA) -> Result<Self, Box<dyn Error>> {
         return Ok(Generator { 
@@ -67,18 +68,18 @@ impl<'a> Generator<'a> {
             self.tabs, self.tabs,
         )?;
         self.tabs.push('\t');
-        writeln!(self.file, "{}match state {{", self.tabs);
+        writeln!(self.file, "{}match state {{", self.tabs)?;
 
         self.tabs.push('\t');
         for state in 0..self.dfa.ncount {
             self.writeTransitions(state)?;
         }
-        writeln!(self.file, "}}");
+        writeln!(self.file, "}}")?;
         return Ok(());
     }
 
     fn writeTransitions(&mut self, state: usize) -> Result<(), Box<dyn Error>> {
-        write!(self.file, "{}{} => ", self.tabs, state);
+        write!(self.file, "{}{} => ", self.tabs, state)?;
         let accepts = self.dfa.accepts[state];
         if accepts != 0 {
             write!(
@@ -89,7 +90,7 @@ impl<'a> Generator<'a> {
             return Ok(());
         }
 
-        writeln!(self.file, "{}state = match self.char {{", self.tabs);
+        writeln!(self.file, "{}state = match self.char {{", self.tabs)?;
         self.tabs.push('\t');
         for mut j in 0..128u8 {
             let start =  j;

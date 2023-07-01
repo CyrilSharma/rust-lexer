@@ -275,14 +275,14 @@ mod tests {
 
     #[test]
     fn right_wrong() {
-        let path = "tests/data/parser/input/";
+        let path = "tests/data/parser/input";
         for id in ["right", "wrong"] {
             let mut i = 0;
             while Path::new(&format!("{path}/{id}-{i}.txt")).exists() {
-                let tr = TokenReader::new(format!("{path}/rightnp-{i}"));
+                let tr = TokenReader::new(format!("{path}/{id}-{i}.txt"));
                 let mut parser = Parser::new(tr).expect("Invalid Token Stream");
                 let matches = parser.parse();
-                assert!(id == "right" && !matches.is_err());
+                assert!((id == "right") == !matches.is_err());
                 i += 1
             }
         }
@@ -290,8 +290,8 @@ mod tests {
 
     #[test]
     fn ast() {
-        let inpath = "tests/data/parser/input/";
-        let outpath = "tests/data/parser/output/";
+        let inpath = "tests/data/parser/input";
+        let outpath = "tests/data/parser/output";
 
         let mut i = 0;
         while Path::new(&format!("{inpath}/ast-{i}")).exists() {

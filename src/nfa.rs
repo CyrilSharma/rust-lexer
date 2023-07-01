@@ -1,4 +1,6 @@
 use crate::{ast, lexer};
+
+const NULL: usize = usize::MAX;
 pub struct NFA { 
     pub ncount:  usize,
     pub jumps:   Vec<[usize; u8::MAX as usize]>,
@@ -39,7 +41,7 @@ impl NFA {
                 let right = self.build(&node.right);
                 match node.op {
                     lexer::Op::BAR  => self.handle_bar(left, right),
-                    lexer::Op::PLUS => self.handle_dash(node.left.char(), node.right.char()),
+                    lexer::Op::DASH => self.handle_dash(node.left.char(), node.right.char()),
                     lexer::Op::AND  => self.handle_add(left, right),
                     _ => panic!("Expected Binary Op but got {:?}", node.op)
                 }
@@ -71,7 +73,7 @@ impl NFA {
     fn handle_dash(&mut self, start: char, end: char) -> (usize, usize) {
         let i = self.make_node();
         let f = self.make_node();
-        for c in start..end { 
+        for c in start..=end { 
             self.add(i, f, c);
         }
         return (i, f);
@@ -145,6 +147,7 @@ impl NFA {
         self.ncount += 1;
         self.jumps.push([usize::MAX; u8::MAX as usize]);
         self.eps.push(Vec::new());
+        self.accepts.push(0);
         return self.ncount - 1;
     }
 }
@@ -152,47 +155,111 @@ impl NFA {
 #[cfg(test)]
 mod tests {
     use std::{path::Path, fs::File, io::{BufReader, BufRead}};
-
     use crate::{lexer::Lexer, parser::Parser};
 
     use super::*;
     impl NFA {
         fn accepts(&self, s: &str) -> bool {
-            let mut chars = s.chars().peekable();
-            let mut stk = vec![(0usize, chars.next().expect("Should have at least one character.")); 1];
-            while let Some((state, c) ) = stk.pop() {
-                if let Some(d) = chars.peek() {
-                    stk.push((self.jumps[state][c as usize], *d));
-                    for item in &self.eps[state] {
-                        stk.push((*item, *d))
-                    }
-                } else if self.accepts[state] != 0 {
-                    return true;
+            let mut states: Vec<usize> = self.eps_closure(vec![0; 1]);
+            for c in s.chars() {
+                let mut has = vec![false; self.ncount];
+                let mut mv: Vec<usize> = Vec::new();
+                for s in &states {
+                    let nxt = self.jumps[*s][c as usize];
+                    if nxt != NULL && !has[nxt] { 
+                        has[nxt] = true;
+                        mv.push(nxt); 
+                    } 
+                }
+                states = self.eps_closure(mv);
+            }
+
+            for state in states {
+                if self.accepts[state] != 0 { 
+                    return true; 
                 }
             }
             return false;
+        }
+
+        fn eps_closure(&self, T: Vec<usize>) -> Vec<usize> {
+            let mut has = vec![false; self.ncount];
+            let mut closure: Vec<usize> = T;
+            let mut stack: Vec<usize> = Vec::new();
+            for s in &closure { 
+                stack.push(*s); 
+                has[*s] = true;
+            }
+            while let Some(s) = stack.pop() {
+                for nbr in &self.eps[s] {
+                    if has[*nbr] { continue; }
+                    has[*nbr] = true;
+                    closure.push(*nbr);
+                    stack.push(*nbr);
+                }
+            }
+            return closure;
+        }
+
+        fn print_dot(&self) {
+            println!("digraph TransitionTable {{");
+            for state in 0..self.ncount {
+                let mut ind = 0;
+                while ind < u8::MAX {
+                    let nbr = self.jumps[state][ind as usize];
+                    if nbr == NULL { ind += 1; continue };
+
+                    let start = ind;
+                    while ind + 1 < u8::MAX &&
+                        self.jumps[state][(ind + 1) as usize] == nbr {
+                        ind += 1;
+                    }
+
+                    if start == ind {
+                        println!("\t{} -> {} [label=\"{}\"];",
+                            state, nbr, ind as char
+                        );
+                    } else {
+                        println!("\t{} -> {} [label=\"{}\"];",
+                            state, nbr,
+                            format!("{}-{}", start as char, ind as char)
+                        );
+                    }
+                    ind += 1;
+                }
+                for nbr in &self.eps[state] {
+                    println!("\t{} -> {} [label=\"eps\"];",
+                        state, *nbr
+                    );
+                }
+            }
+            println!("}}");
         }
     }
 
     #[test]
     fn test_matches() {
-        let path = "tests/data/nfa";
+        let path = "tests/data/nfa/input";
         let mut i = 0;
-        let filepath = format!("{path}/match-{i}");
-        while Path::new(&filepath).exists() {
-            let mut lexer = Lexer::new(&filepath).expect("Invalid Path");
+        while Path::new(&format!("{path}/match-{i}.txt")).exists() {
+            println!("{}", format!("{path}/match-{i}.txt"));
+            let lexer = Lexer::new(&format!("{path}/match-{i}.txt")).expect("Invalid Path");
             let mut parser = Parser::new(lexer).expect("File should be non-empty!");
             let mut nfa = NFA::new();
             nfa.build_from_matches(&parser.parse().expect("Invalid parse"));
+            nfa.print_dot();
             for id in ["right", "wrong"] {
-                let file = File::open(&format!("{path}/{id}-words-{i}")).expect("Should be valid...");
+                let file = File::open(&format!("{path}/{id}-words-{i}.txt"))
+                    .expect("Should be valid...");
                 let reader = BufReader::new(file);
                 for line in reader.lines() {
                     if let Ok(word) = line {
+                        println!("{}, {}", &word, id);
                         assert!(nfa.accepts(&word) == (id == "right"));
                     }
                 }
             }
+            i += 1;
         }
     }
 }
