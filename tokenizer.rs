@@ -20,7 +20,13 @@ impl Lexer {
         let chars = fs::read_to_string(fname)?
             .chars()
             .collect();
-		let accepts = [0, 0, 0, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 0, 0, 6];
+		let accepts = [
+			0, 			0, 			0, 			3, 			4,
+			5, 			5, 			5, 			5, 			5,
+			5, 			5, 			5, 			5, 			5,
+			1, 			5, 			2, 			0, 			0,
+			6
+		];
         return Ok(Lexer { chars, pos: 0, accepts });
     }
 
@@ -30,9 +36,10 @@ impl Lexer {
     }
 	fn next(&mut self) -> Result<Token, TokenErr> {
 		let mut stk: Vec<usize> = Vec::new();
-		const dead: usize = 1;
+		let mut chars: Vec<Char> = Vec::new();
 		let mut state: usize = 0;
-		while state != dead {
+		loop {
+			if pos == self.chars.len() { break; }
 			let c = self.nextchar();
 			state = match state {
 				0 => match c {
@@ -45,32 +52,32 @@ impl Lexer {
 					'g'..='v' => 6,
 					'w' => 8,
 					'x'..='z' => 6,
-					_ => 1
+					_ => break
 				},
 				1 => match c {
-					_ => 1
+					_ => break
 				},
 				2 => match c {
 					'\t' => 18,
-					_ => 1
+					_ => break
 				},
 				3 => match c {
-					_ => 1
+					_ => break
 				},
 				4 => match c {
-					_ => 1
+					_ => break
 				},
 				5 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				6 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				7 => match c {
 					'0'..='9' => 9,
@@ -78,7 +85,7 @@ impl Lexer {
 					'a'..='n' => 11,
 					'o' => 16,
 					'p'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				8 => match c {
 					'0'..='9' => 9,
@@ -86,25 +93,25 @@ impl Lexer {
 					'a'..='g' => 11,
 					'h' => 12,
 					'i'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				9 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				10 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				11 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				12 => match c {
 					'0'..='9' => 9,
@@ -112,7 +119,7 @@ impl Lexer {
 					'a'..='h' => 11,
 					'i' => 13,
 					'j'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				13 => match c {
 					'0'..='9' => 9,
@@ -120,7 +127,7 @@ impl Lexer {
 					'a'..='k' => 11,
 					'l' => 14,
 					'm'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				14 => match c {
 					'0'..='9' => 9,
@@ -128,13 +135,13 @@ impl Lexer {
 					'a'..='d' => 11,
 					'e' => 15,
 					'f'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				15 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				16 => match c {
 					'0'..='9' => 9,
@@ -142,30 +149,33 @@ impl Lexer {
 					'a'..='q' => 11,
 					'r' => 17,
 					's'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				17 => match c {
 					'0'..='9' => 9,
 					'A'..='Z' => 10,
 					'a'..='z' => 11,
-					_ => 1
+					_ => break
 				},
 				18 => match c {
 					'\n' => 19,
-					_ => 1
+					_ => break
 				},
 				19 => match c {
 					'\r' => 20,
-					_ => 1
+					_ => break
 				},
 				20 => 0,
 			};
 			stk.push(state);
+			chars.push(c);
 		}
 		while self.accepts[state] == 0 {
+		   if stk.len() == 0 { return TokenErr::Err; }
 		   state = stk.pop();
+		   chars = chars.pop();
 		}
-		let word : String = stk.iter.collect();
+		let word : String = chars.iter.collect();
 		match self.accepts[state] {
 			3 => return LPAR(word),
 			4 => return RPAR(word),

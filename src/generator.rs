@@ -90,11 +90,12 @@ impl<'a> Generator<'a> {
     fn write_automota(&mut self) -> Result<(), Box<dyn Error>> {
         self.write_vec(&[
             "let mut stk: Vec<usize> = Vec::new();",
-            &format!("const dead: usize = {};", self.dfa.dead),
+            "let mut chars: Vec<Char> = Vec::new();",
             "let mut state: usize = 0;",
-            "while state != dead {",
+            "loop {",
         ])?;
         self.indent();
+        self.writeln("if pos == self.chars.len() { break; }")?;
         self.writeln("let c = self.nextchar();")?;
         self.writeln("state = match state {")?;
         self.indent();
@@ -104,14 +105,17 @@ impl<'a> Generator<'a> {
         self.unindent();
         self.writeln("};")?;
         self.writeln("stk.push(state);")?;
+        self.writeln("chars.push(c);")?;
         self.unindent();
         self.writeln("}")?;
         self.write_vec(&[
             "while self.accepts[state] == 0 {",
+            "   if stk.len() == 0 { return TokenErr::Err; }",
             "   state = stk.pop();",
+            "   chars = chars.pop();",
             "}"
         ])?;
-        self.writeln("let word : String = stk.iter.collect();")?;
+        self.writeln("let word : String = chars.iter.collect();")?;
         self.writeln("match self.accepts[state] {")?;
         self.indent();
         for idx in 0..self.dfa.accepts.len() {
@@ -173,20 +177,30 @@ impl<'a> Generator<'a> {
             }
             j += 1;
         }
-        self.writeln(&format!("_ => {}", self.dfa.dead))?;
+        self.writeln("_ => break")?;
         self.unindent();
         self.writeln("},")?;
         return Ok(());
     }
 
     fn gen_accepts(&self) -> String {
-        let mut res = "\t\tlet accepts = [".to_string();
-        for idx in 0..self.dfa.ncount-1 { 
-            res.push_str(&format!("{}, ", self.dfa.accepts[idx]));
+        let mut res = "\t\tlet accepts = [\n".to_string();
+        let mut idx = 0;
+        while (self.dfa.ncount-idx) / 5 > 0 { 
+            for _ in 0..4 {
+                res.push_str(&format!("\t\t\t{}, ", self.dfa.accepts[idx]));
+                idx += 1;
+            }
+            res.push_str(&format!("\t\t\t{},\n", self.dfa.accepts[idx]));
+            idx += 1;
         }
-        res.push_str(&format!(
-            "{}];", self.dfa.accepts[self.dfa.ncount - 1]
-        ));
+        if self.dfa.ncount%5 > 0 {
+            for _ in 0..(self.dfa.ncount%5 - 1) {
+                res.push_str(&format!("\t\t\t{}, ", self.dfa.accepts[idx]));
+            }
+            res.push_str(&format!("\t\t\t{}\n", self.dfa.accepts[idx]));
+        }
+        res.push_str("\t\t];");
         return res;
     }
 }
