@@ -50,6 +50,7 @@ impl<'a> Generator<'a> {
             if label.len() == 0 { continue; }
             self.writeln(&format!("{label}(String),"))?;
         }
+        self.writeln("EOF")?;
         self.unindent();
         self.writeln("}")?;
         self.write_vec(&[
@@ -91,12 +92,12 @@ impl<'a> Generator<'a> {
     fn write_automota(&mut self) -> Result<(), Box<dyn Error>> {
         self.write_vec(&[
             "let mut stk: Vec<usize> = Vec::new();",
-            "let mut chars: Vec<Char> = Vec::new();",
+            "let mut chars: Vec<char> = Vec::new();",
             "let mut state: usize = 0;",
             "loop {",
         ])?;
         self.indent();
-        self.writeln("if pos == self.chars.len() { break; }")?;
+        self.writeln("if self.pos == self.chars.len() { return Ok(EOF); }")?;
         self.writeln("let c = self.nextchar();")?;
         self.writeln("state = match state {")?;
         self.indent();
@@ -111,9 +112,9 @@ impl<'a> Generator<'a> {
         self.writeln("}")?;
         self.write_vec(&[
             "while self.accepts[state] == 0 {",
-            "   if stk.len() == 0 { return TokenErr::Err; }",
-            "   state = stk.pop();",
-            "   chars = chars.pop();",
+            "   if stk.len() == 0 { return Err(TokenErr::Err); }",
+            "   state = stk.pop().unwrap();",
+            "   chars = chars.pop().unwrap();",
             "}"
         ])?;
         self.writeln("let word : String = chars.iter.collect();")?;
@@ -126,11 +127,11 @@ impl<'a> Generator<'a> {
                 continue;
             }
             self.writeln(&format!(
-                "{idx} => return {}(word),",
+                "{idx} => return Ok({}(word)),",
                 self.dfa.labels[acc - 1],
             ))?;
         }
-        self.writeln("_ => return TokenErr::Err")?;
+        self.writeln("_ => return Err(TokenErr::Err)")?;
         self.unindent();
         self.writeln("}")?;
         return Ok(());
@@ -224,9 +225,6 @@ mod tests {
     use super::*;
     use crate::{lexer::Lexer, parser::Parser, nfa::NFA};
 
-    use std::process::Command;
-
-    #[test]
     #[allow(dead_code)]
     fn visualize() {
         let path = "example2.tk";

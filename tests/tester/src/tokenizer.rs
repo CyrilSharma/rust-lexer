@@ -7,6 +7,7 @@ pub enum Token {
 	LPAR(String),
 	RPAR(String),
 	IDENT(String),
+    EOF
 }
 pub enum TokenErr {
    Err
@@ -40,7 +41,7 @@ impl Lexer {
 		let mut chars: Vec<Char> = Vec::new();
 		let mut state: usize = 0;
 		loop {
-			if pos == self.chars.len() { break; }
+			if pos == self.chars.len() { return EOF; }
 			let c = self.nextchar();
 			state = match state {
 				0 => match c {
@@ -173,8 +174,8 @@ impl Lexer {
 		}
 		while self.accepts[state] == 0 {
 		   if stk.len() == 0 { return TokenErr::Err; }
-		   state = stk.pop();
-		   chars = chars.pop();
+		   state = stk.pop().unwrap();
+		   chars = chars.pop().unwrap();
 		}
 		let word : String = chars.iter.collect();
 		match self.accepts[state] {
