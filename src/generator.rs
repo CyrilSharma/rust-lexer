@@ -1,11 +1,11 @@
 use std::{fs::File, error::Error};
 use std::io::Write;
-use crate::dfa::{DFA};
+use crate::dfa::{DFA, self};
 
 struct Generator<'a> { 
     dfa: &'a DFA,
     file: File,
-    tabs: String
+    tabs: usize
 }
 
 #[allow(dead_code)]
@@ -14,119 +14,173 @@ impl<'a> Generator<'a> {
         return Ok(Generator { 
             dfa,
             file: File::create("tokenizer.rs")?,
-            tabs: String::new()
+            tabs: 0
         });
     }
+    fn write_inline(&mut self, s: &str) -> Result<(), Box<dyn Error>> {
+        write!(self.file, "{}",s)?;
+        return Ok(());
+    }
+    fn write(&mut self, s: &str) -> Result<(), Box<dyn Error>> {
+        write!(self.file, "{}", &format!(
+            "{}{}", 
+            "\t".repeat(self.tabs),
+            s
+        ))?;
+        return Ok(());
+    }
+    fn writeln(&mut self, s: &str) -> Result<(), Box<dyn Error>> {
+        self.write(&format!("{s}\n"))?;
+        return Ok(());
+    }
+    fn write_vec(&mut self, strs: &[&str]) -> Result<(), Box<dyn Error>> {
+        for s in strs { self.writeln(s)?; }
+        return Ok(());
+    }
+    fn indent(&mut self)   { self.tabs += 1; }
+    fn unindent(&mut self) { self.tabs -= 1; }
 
     pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
-        writeln!(self.file, "#[derive(Copy, Clone, Debug, PartialEq, Eq)]")?;
-        writeln!(self.file, "pub enum Token {{")?;
+        self.writeln("#[derive(Copy, Clone, Debug, PartialEq, Eq)]")?;
+        self.writeln("pub enum Token {")?;
+        self.indent();
         for label in &self.dfa.labels {
-            writeln!(self.file, "\t{label}(String),")?;
+            if label.len() == 0 { continue; }
+            self.writeln(&format!("{label}(String),"))?;
         }
-        writeln!(self.file, "}}")?;
-
-        writeln!(self.file,
-            "\
-            pub struct Lexer {{\n\
-                chars: Vec<char>,\n\
-                pos: usize\n\
-            }}\n\
-            impl Lexer {{\n\
-                pub fn new(fname: &str) -> Result<Self, Box<dyn std::error::Error>> {{\n\
-                    let chars = fs::read_to_string(fname)?\n\
-                        .chars()\n\
-                        .collect();\n\
-                    return Ok(Lexer {{ chars, pos: 0, enclosed: false }});\n\
-                }}\n\
-                \n
-                fn nextchar(&mut self) -> char {{\n\
-                    self.pos += 1;\n\
-                    return self.chars[self.pos - 1];\n\
-                }}\
-            ",
-        )?;
-        self.tabs.push('\t');
-        writeln!(self.file,
-            "{}fn next(&mut self) -> Result<Token, TokenErr> {{",
-            self.tabs
-        )?;
-        self.tabs.push('\t');
+        self.unindent();
+        self.writeln("}")?;
+        self.write_vec(&[
+            "pub struct Lexer {",
+            "  chars: Vec<char>,",
+            "  pos:   usize",
+            "}",
+            "impl Lexer {",
+            "    pub fn new(fname: &str) -> Result<Self, Box<dyn std::error::Error>> {",
+            "        let chars = fs::read_to_string(fname)?",
+            "            .chars()",
+            "            .collect();",
+            "        return Ok(Lexer { chars, pos: 0 });",
+            "    }",
+            "",
+            "    fn nextchar(&mut self) -> char {",
+            "        self.pos += 1;",
+            "        return self.chars[self.pos - 1];",
+            "    }",
+        ])?;
+        self.indent();
+        self.writeln("fn next(&mut self) -> Result<Token, TokenErr> {")?;
+        self.indent();
         self.write_automota()?;
-        self.tabs.pop();
-        writeln!(self.file, "}}")?;
-        self.tabs.pop();
-        writeln!(self.file, "}}")?;
+        self.unindent();
+        self.writeln("}")?;
+        self.unindent();
+        self.writeln("}")?;
         return Ok(());
     }
 
     fn write_automota(&mut self) -> Result<(), Box<dyn Error>> {
-        writeln!(self.file,
-            "{}let mut state = 0;\n\
-             {}while let Some(c) = self.cur {{\n\
-            ",
-            self.tabs, self.tabs,
-        )?;
-        self.tabs.push('\t');
-        writeln!(self.file, "{}match state {{", self.tabs)?;
-
-        self.tabs.push('\t');
+        self.writeln(&format!("const dead: u32 = {};", self.dfa.dead))?;
+        self.write_vec(&[
+            "let mut state: u32 = 0;",
+            "while state != dead {",
+        ])?;
+        self.indent();
+        self.writeln("match state {")?;
+        self.indent();
         for state in 0..self.dfa.ncount {
             self.write_transitions(state)?;
         }
-        writeln!(self.file, "}}")?;
+        self.unindent();
+        self.writeln("}")?;
+        self.unindent();
+        self.writeln("}")?;
         return Ok(());
     }
 
     fn write_transitions(&mut self, state: usize) -> Result<(), Box<dyn Error>> {
-        write!(self.file, "{}{} => ", self.tabs, state)?;
         let accepts = self.dfa.accepts[state];
-        if accepts != 0 {
-            write!(
-                self.file,
-                "return {},",
-                self.dfa.labels[accepts]
+        if accepts != 0 &&
+            self.dfa.labels[accepts - 1].len() > 0 {
+            self.writeln(
+                &format!("{state} => return {},",
+                self.dfa.labels[accepts - 1])
             )?;
+            return Ok(());
+        } else if accepts != 0 &&
+            self.dfa.labels[accepts - 1].len() == 0 {
             return Ok(());
         }
 
-        writeln!(self.file, "{}state = match self.char {{", self.tabs)?;
-        self.tabs.push('\t');
-        for mut j in 0..128u8 {
+        self.writeln(&format!("{state} => state = match self.char {{"))?;
+        self.indent();
+        let mut j = 0;
+        while j < u8::MAX {
+            let nbr = self.dfa.jumps[state][j as usize];
+            if nbr == dfa::NULL { j += 1; continue; };
+            if self.dfa.dead == nbr { j += 1; continue; }
+            //println!("{} - {}", self.dfa.dead, nbr);
             let start =  j;
-            while self.dfa.jumps[state][j as usize] != 0 &&
-                j <= 128 { 
+            while j + 1 < u8::MAX &&
+                self.dfa.jumps[state][(j + 1) as usize] == nbr { 
                 j += 1 
             }
+            //println!("{}", self.dfa.jumps[state][j as usize]);
             if start == j {
-                writeln!(
-                    self.file, 
-                    "{}{} => {},",
-                    self.tabs, start as char,
+                self.writeln(&format!("\'{}\' => {},",
+                    escape(start as char),
                     self.dfa.jumps[state][j as usize]
-                )?;
+                ))?;
             } else if start + 1 == j {
-                writeln!(
-                    self.file, 
-                    "{}{} | {} => {},",
-                    self.tabs, start, j,
+                self.writeln(&format!("\'{}\' | \'{}\' => {},",
+                    escape(start as char), 
+                    escape(j as char),
                     self.dfa.jumps[state][j as usize]
-                )?;
+                ))?;
             } else {
-                writeln!(
-                    self.file, 
-                    "{}{}..={} => {},",
-                    self.tabs, start, j,
+                self.writeln(&format!(
+                    "\'{}\'..=\'{}\' => {},",
+                    escape(start as char),
+                    escape(j as char),
                     self.dfa.jumps[state][j as usize]
-                )?;
+                ))?;
             }
+            j += 1;
         }
-        writeln!(self.file, "{}_ => return LexError()", self.tabs)?;
-
-        self.tabs.pop();
-        writeln!(self.file, "{}}}", self.tabs)?;
+        self.writeln(&format!("_ => {}", self.dfa.dead))?;
+        self.unindent();
+        self.writeln("},")?;
         return Ok(());
     }
 }
 
+fn escape(c: char) -> String {
+    match c {
+        '\n' => return "\\n".to_string(),
+        '\t' => return "\\t".to_string(),
+        '\\' => "\\\\".to_string(),
+        '\'' => "\\'".to_string(),
+        '"' => "\\\"".to_string(),
+        '\r' => "\\r".to_string(),
+        _ => return c.to_string()
+    }
+}
+
 /* TODO - Lexing Testcases... */
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{lexer::Lexer, parser::Parser, nfa::NFA};
+
+    #[test]
+    #[allow(dead_code)]
+    fn visualize() {
+        let path = "example.tk";
+        let lexer = Lexer::new(path).expect("Invalid Path");
+        let mut parser = Parser::new(lexer).expect("File should be non-empty!");
+        let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
+        let dfa = DFA::subset_construction(nfa);
+        let mut gen = Generator::new(&dfa).expect("Just Be Better");
+        gen.generate().expect("WORK");
+    }
+}

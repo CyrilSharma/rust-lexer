@@ -1,5 +1,5 @@
 use crate::nfa::{NFA};
-const NULL: usize = usize::MAX;
+pub(crate) const NULL: usize = usize::MAX;
 pub struct DFA {
     pub ncount:  usize,
     pub jumps:   Vec<[usize; u8::MAX as usize]>,
@@ -20,7 +20,7 @@ impl DFA {
         };
     }
 
-    fn subset_construction(nfa: NFA) -> Self {
+    pub fn subset_construction(nfa: NFA) -> Self {
         let mut ncount:  usize = 1;
         let mut jumps = vec![[NULL; u8::MAX as usize]; 1];
         let mut accepts: Vec<usize> = vec![0; 1];
@@ -56,7 +56,7 @@ impl DFA {
                 //println!("u: {}", u);
                 if u == d_states.len() { 
                     d_states.push(state.clone());
-                    jumps.push([usize::MAX; u8::MAX as usize]);
+                    jumps.push([NULL; u8::MAX as usize]);
                     accepts.push(DFA::is_accept(&nfa, state));
                     unmarked.push(u);
                     ncount += 1;
