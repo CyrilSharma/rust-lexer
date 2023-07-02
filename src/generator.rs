@@ -41,6 +41,7 @@ impl<'a> Generator<'a> {
     fn unindent(&mut self) { self.tabs -= 1; }
 
     pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
+        self.writeln("use Token::*;")?;
         self.writeln("#[derive(Copy, Clone, Debug, PartialEq, Eq)]")?;
         self.writeln("pub enum Token {")?;
         self.indent();
@@ -51,16 +52,23 @@ impl<'a> Generator<'a> {
         self.unindent();
         self.writeln("}")?;
         self.write_vec(&[
+            "pub enum TokenErr {",
+            "   Err",
+            "}"
+        ])?;
+        self.write_vec(&[
             "pub struct Lexer {",
-            "  chars: Vec<char>,",
-            "  pos:   usize",
+            "  chars:   Vec<char>,",
+            "  pos:     usize,",
+            &format!("  accepts: [usize; {}]", self.dfa.ncount),
             "}",
             "impl Lexer {",
             "    pub fn new(fname: &str) -> Result<Self, Box<dyn std::error::Error>> {",
             "        let chars = fs::read_to_string(fname)?",
             "            .chars()",
             "            .collect();",
-            "        return Ok(Lexer { chars, pos: 0 });",
+            &self.gen_accepts(),
+            "        return Ok(Lexer { chars, pos: 0, accepts });",
             "    }",
             "",
             "    fn nextchar(&mut self) -> char {",
@@ -80,19 +88,44 @@ impl<'a> Generator<'a> {
     }
 
     fn write_automota(&mut self) -> Result<(), Box<dyn Error>> {
-        self.writeln(&format!("const dead: u32 = {};", self.dfa.dead))?;
         self.write_vec(&[
-            "let mut state: u32 = 0;",
+            "let mut stk: Vec<usize> = Vec::new();",
+            &format!("const dead: usize = {};", self.dfa.dead),
+            "let mut state: usize = 0;",
             "while state != dead {",
         ])?;
         self.indent();
-        self.writeln("match state {")?;
+        self.writeln("let c = self.nextchar();")?;
+        self.writeln("state = match state {")?;
         self.indent();
         for state in 0..self.dfa.ncount {
             self.write_transitions(state)?;
         }
         self.unindent();
+        self.writeln("};")?;
+        self.writeln("stk.push(state);")?;
+        self.unindent();
         self.writeln("}")?;
+        self.write_vec(&[
+            "while self.accepts[state] == 0 {",
+            "   state = stk.pop();",
+            "}"
+        ])?;
+        self.writeln("let word : String = stk.iter.collect();")?;
+        self.writeln("match self.accepts[state] {")?;
+        self.indent();
+        for idx in 0..self.dfa.accepts.len() {
+            let acc = self.dfa.accepts[idx];
+            if acc == 0 || 
+                self.dfa.labels[acc - 1].len() == 0 {
+                continue;
+            }
+            self.writeln(&format!(
+                "{idx} => return {}(word),",
+                self.dfa.labels[acc - 1],
+            ))?;
+        }
+        self.writeln("_ => return TokenErr::Err")?;
         self.unindent();
         self.writeln("}")?;
         return Ok(());
@@ -100,19 +133,12 @@ impl<'a> Generator<'a> {
 
     fn write_transitions(&mut self, state: usize) -> Result<(), Box<dyn Error>> {
         let accepts = self.dfa.accepts[state];
-        if accepts != 0 &&
-            self.dfa.labels[accepts - 1].len() > 0 {
-            self.writeln(
-                &format!("{state} => return {},",
-                self.dfa.labels[accepts - 1])
-            )?;
-            return Ok(());
-        } else if accepts != 0 &&
+        if self.dfa.accepts[state] != 0 &&
             self.dfa.labels[accepts - 1].len() == 0 {
+            self.writeln(&format!("{state} => 0,"))?;
             return Ok(());
         }
-
-        self.writeln(&format!("{state} => state = match self.char {{"))?;
+        self.writeln(&format!("{state} => match c {{"))?;
         self.indent();
         let mut j = 0;
         while j < u8::MAX {
@@ -151,6 +177,17 @@ impl<'a> Generator<'a> {
         self.unindent();
         self.writeln("},")?;
         return Ok(());
+    }
+
+    fn gen_accepts(&self) -> String {
+        let mut res = "\t\tlet accepts = [".to_string();
+        for idx in 0..self.dfa.ncount-1 { 
+            res.push_str(&format!("{}, ", self.dfa.accepts[idx]));
+        }
+        res.push_str(&format!(
+            "{}];", self.dfa.accepts[self.dfa.ncount - 1]
+        ));
+        return res;
     }
 }
 
