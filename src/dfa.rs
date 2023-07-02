@@ -18,40 +18,55 @@ impl DFA {
         };
     }
 
-    fn subset_construction(&mut self, nfa: NFA) {
-        let mut d_states: Vec<Vec<usize>> = Vec::new();
-        d_states.push(DFA::eps_closure(&nfa, vec![0; 1]));
+    fn subset_construction(nfa: NFA) -> Self {
+        let mut ncount:  usize = 1;
+        let mut jumps = vec![[NULL; u8::MAX as usize]; 1];
+        let mut accepts: Vec<usize> = vec![0; 1];
         let mut unmarked = vec![0usize; 1];
+        let mut d_states: Vec<Vec<usize>> = vec![
+            DFA::eps_closure(&nfa, vec![0; 1]); 1
+        ];
         while let Some(index) = unmarked.pop() {
+            //println!("index: {}", index);
             for c in 0..u8::MAX {
                 // MOVE
                 let mut has = vec![false; nfa.ncount];
                 let mut nxt: Vec<usize> = Vec::new();
+                
                 for d in &d_states[index] {
-                    if has[*d] { continue; }
                     let mv = nfa.jumps[*d][c as usize];
-                    if mv == NULL { continue; }
+                    if mv == NULL || has[mv] { continue; }
                     nxt.push(mv);
-                    has[*d] = true;
+                    has[mv] = true;
                 }
 
+                //if index == 6 { println!("Len: {}", nxt.len()); }
                 let state = DFA::eps_closure(&nfa,nxt);
 
                 // Seen Before?
-                let mut u: usize = self.jumps.len();
+                let mut u = d_states.len();
                 for i in 0..d_states.len() {
                     if d_states[i] == state {
                         u = i;
                         break;
                     }
                 }
-                if u == self.jumps.len() { 
-                    d_states.push(state.clone()); 
-                    u = self.add_state(DFA::accepts(&nfa, state));
+                //println!("u: {}", u);
+                if u == d_states.len() { 
+                    d_states.push(state.clone());
+                    jumps.push([usize::MAX; u8::MAX as usize]);
+                    accepts.push(DFA::is_accept(&nfa, state));
                     unmarked.push(u);
+                    ncount += 1;
                 }
-                self.jumps[index][c as usize] = u;
+                jumps[index][c as usize] = u;
             }
+        }
+        return Self {
+            ncount,
+            jumps,
+            accepts,
+            labels: nfa.labels.clone()
         }
     }
 
@@ -74,19 +89,12 @@ impl DFA {
         return closure;
     }
 
-    fn accepts(nfa: &NFA, set: Vec<usize>) -> usize {
+    fn is_accept(nfa: &NFA, set: Vec<usize>) -> usize {
         for s in set {
             let acc = nfa.accepts[s];
             if acc != 0 { return acc; }
         }
         return 0;
-    }
-
-    fn add_state(&mut self, accept: usize) -> usize {
-        self.ncount += 1;
-        self.jumps.push([usize::MAX; u8::MAX as usize]);
-        self.accepts.push(accept);
-        return self.ncount - 1;
     }
 }
 
@@ -97,7 +105,7 @@ mod tests {
     use super::*;
 
     impl DFA {
-        fn takes(&self, s: &str) -> bool {
+        fn accepts(&self, s: &str) -> bool {
             let mut state = 0;
             let chars = s.chars();
             for c in chars {
@@ -142,15 +150,13 @@ mod tests {
     fn test_matches() {
         let path = "tests/data/regex/input";
         let mut i = 0;
-        
         while Path::new(&format!("{path}/match-{i}.txt")).exists() {
             println!("{}", format!("{path}/match-{i}.txt"));
             let lexer = Lexer::new(&format!("{path}/match-{i}.txt")).expect("Invalid Path");
             let mut parser = Parser::new(lexer).expect("File should be non-empty!");
             let mut nfa = NFA::new();
             nfa.build_from_matches(&parser.parse().expect("Invalid parse"));
-            let mut dfa = DFA::new();
-            dfa.subset_construction(nfa);
+            let dfa = DFA::subset_construction(nfa);
 
             dfa.print_dot();
             for id in ["right", "wrong"] {
@@ -159,7 +165,7 @@ mod tests {
                 let reader = BufReader::new(file);
                 for line in reader.lines() {
                     if let Ok(word) = line {
-                        assert!(dfa.takes(&word) == (id == "right"));
+                        assert!(dfa.accepts(&word) == (id == "right"));
                     }
                 }
             }
