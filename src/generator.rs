@@ -52,7 +52,7 @@ impl<'a> Generator<'a> {
             self.tabs
         )?;
         self.tabs.push('\t');
-        self.writeAutomota()?;
+        self.write_automota()?;
         self.tabs.pop();
         writeln!(self.file, "}}")?;
         self.tabs.pop();
@@ -60,7 +60,7 @@ impl<'a> Generator<'a> {
         return Ok(());
     }
 
-    fn writeAutomota(&mut self) -> Result<(), Box<dyn Error>> {
+    fn write_automota(&mut self) -> Result<(), Box<dyn Error>> {
         writeln!(self.file,
             "{}let mut state = 0;\n\
              {}while let Some(c) = self.cur {{\n\
@@ -72,13 +72,13 @@ impl<'a> Generator<'a> {
 
         self.tabs.push('\t');
         for state in 0..self.dfa.ncount {
-            self.writeTransitions(state)?;
+            self.write_transitions(state)?;
         }
         writeln!(self.file, "}}")?;
         return Ok(());
     }
 
-    fn writeTransitions(&mut self, state: usize) -> Result<(), Box<dyn Error>> {
+    fn write_transitions(&mut self, state: usize) -> Result<(), Box<dyn Error>> {
         write!(self.file, "{}{} => ", self.tabs, state)?;
         let accepts = self.dfa.accepts[state];
         if accepts != 0 {

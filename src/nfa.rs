@@ -1,4 +1,4 @@
-use crate::{ast, lexer};
+use crate::{ast::{self, Match}, lexer};
 
 const NULL: usize = usize::MAX;
 pub struct NFA { 
@@ -19,17 +19,19 @@ impl NFA {
         };
     }
 
-    pub fn build_from_matches(&mut self, matches: &Vec<ast::Match>) {
-        let root = self.make_node();
+    pub fn build_from_matches(matches: &Vec<ast::Match>) -> Self {
+        let mut nfa = NFA::new();
+        let root = nfa.make_node();
         for m in matches {
-            let node = self.build_ast(&m.root, m.name.to_string());
-            self.add_eps(root,node);
+            let node = NFA::build_ast(&mut nfa, m);
+            nfa.add_eps(root,node);
         }
+        return nfa;
     }
 
-    fn build_ast(&mut self, ast: &ast::Node, label: String) -> usize {
-        let (start, end) = self.build(ast);
-        self.label(end, label);
+    fn build_ast(nfa: &mut NFA, m: &Match) -> usize {
+        let (start, end) = nfa.build(&m.root);
+        nfa.label(end, m.name.clone());
         return start;
     }
 
@@ -145,7 +147,7 @@ impl NFA {
 
     fn make_node(&mut self) -> usize {
         self.ncount += 1;
-        self.jumps.push([usize::MAX; u8::MAX as usize]);
+        self.jumps.push([NULL; u8::MAX as usize]);
         self.eps.push(Vec::new());
         self.accepts.push(0);
         return self.ncount - 1;
@@ -182,9 +184,9 @@ mod tests {
             return false;
         }
 
-        fn eps_closure(&self, T: Vec<usize>) -> Vec<usize> {
+        fn eps_closure(&self, set: Vec<usize>) -> Vec<usize> {
             let mut has = vec![false; self.ncount];
-            let mut closure: Vec<usize> = T;
+            let mut closure: Vec<usize> = set;
             let mut stack: Vec<usize> = Vec::new();
             for s in &closure { 
                 stack.push(*s); 
@@ -201,6 +203,7 @@ mod tests {
             return closure;
         }
 
+        #[allow(dead_code)]
         fn print_dot(&self) {
             println!("digraph TransitionTable {{");
             for state in 0..self.ncount {
@@ -245,16 +248,14 @@ mod tests {
             println!("{}", format!("{path}/match-{i}.txt"));
             let lexer = Lexer::new(&format!("{path}/match-{i}.txt")).expect("Invalid Path");
             let mut parser = Parser::new(lexer).expect("File should be non-empty!");
-            let mut nfa = NFA::new();
-            nfa.build_from_matches(&parser.parse().expect("Invalid parse"));
-            nfa.print_dot();
+            let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
+            // nfa.print_dot();
             for id in ["right", "wrong"] {
                 let file = File::open(&format!("{path}/{id}-words-{i}.txt"))
                     .expect("Should be valid...");
                 let reader = BufReader::new(file);
                 for line in reader.lines() {
                     if let Ok(word) = line {
-                        println!("{}, {}", &word, id);
                         assert!(nfa.accepts(&word) == (id == "right"));
                     }
                 }

@@ -115,6 +115,7 @@ mod tests {
             }
             return self.accepts[state] != 0;
         }
+        #[allow(dead_code)]
         fn print_dot(&self) {
             println!("digraph TransitionTable {{");
             for state in 0..self.ncount {
@@ -154,11 +155,10 @@ mod tests {
             println!("{}", format!("{path}/match-{i}.txt"));
             let lexer = Lexer::new(&format!("{path}/match-{i}.txt")).expect("Invalid Path");
             let mut parser = Parser::new(lexer).expect("File should be non-empty!");
-            let mut nfa = NFA::new();
-            nfa.build_from_matches(&parser.parse().expect("Invalid parse"));
+            let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
             let dfa = DFA::subset_construction(nfa);
 
-            dfa.print_dot();
+            // dfa.print_dot();
             for id in ["right", "wrong"] {
                 let file = File::open(&format!("{path}/{id}-words-{i}.txt"))
                     .expect("Should be valid...");
