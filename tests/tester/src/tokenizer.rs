@@ -1,3 +1,4 @@
+use std::fs;
 use Token::*;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Token {

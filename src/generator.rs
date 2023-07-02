@@ -2,19 +2,19 @@ use std::{fs::File, error::Error};
 use std::io::Write;
 use crate::dfa::{DFA, self};
 
-struct Generator<'a> { 
+pub struct Generator<'a> { 
     dfa: &'a DFA,
     file: File,
-    tabs: usize
+    tabs: usize,
 }
 
 #[allow(dead_code)]
 impl<'a> Generator<'a> {
-    pub fn new(dfa: &'a DFA) -> Result<Self, Box<dyn Error>> {
+    pub fn new(dfa: &'a DFA, outpath: String) -> Result<Self, Box<dyn Error>> {
         return Ok(Generator { 
             dfa,
-            file: File::create("tokenizer.rs")?,
-            tabs: 0
+            file: File::create(outpath)?,
+            tabs: 0,
         });
     }
     fn write_inline(&mut self, s: &str) -> Result<(), Box<dyn Error>> {
@@ -41,6 +41,7 @@ impl<'a> Generator<'a> {
     fn unindent(&mut self) { self.tabs -= 1; }
 
     pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
+        self.writeln("use std::fs;")?;
         self.writeln("use Token::*;")?;
         self.writeln("#[derive(Copy, Clone, Debug, PartialEq, Eq)]")?;
         self.writeln("pub enum Token {")?;
@@ -223,15 +224,18 @@ mod tests {
     use super::*;
     use crate::{lexer::Lexer, parser::Parser, nfa::NFA};
 
+    use std::process::Command;
+
     #[test]
     #[allow(dead_code)]
     fn visualize() {
-        let path = "example.tk";
+        let path = "example2.tk";
         let lexer = Lexer::new(path).expect("Invalid Path");
         let mut parser = Parser::new(lexer).expect("File should be non-empty!");
         let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
         let dfa = DFA::subset_construction(nfa);
-        let mut gen = Generator::new(&dfa).expect("Just Be Better");
+        let mut gen = Generator::new(&dfa, "tests/tokenizer.rs".to_string())
+            .expect("Just Be Better");
         gen.generate().expect("WORK");
     }
 }
