@@ -4,7 +4,8 @@ pub struct DFA {
     pub ncount:  usize,
     pub jumps:   Vec<[usize; u8::MAX as usize]>,
     pub accepts: Vec<usize>,
-    pub labels:  Vec<String>
+    pub labels:  Vec<String>,
+    pub dead:    usize
 }
 
 #[allow(dead_code)]
@@ -14,7 +15,8 @@ impl DFA {
             ncount:  0,
             jumps:   Vec::new(),
             accepts: Vec::new(),
-            labels:  Vec::new()
+            labels:  Vec::new(),
+            dead:    0
         };
     }
 
@@ -62,11 +64,20 @@ impl DFA {
                 jumps[index][c as usize] = u;
             }
         }
+        let mut dead = 0;
+        for i in 0..d_states.len() {
+            if d_states[i] == Vec::new() {
+                dead = i;
+                break;
+            }
+        }
+        assert!(dead != d_states.len(), "Dead state must exist!");
         return Self {
             ncount,
             jumps,
             accepts,
-            labels: nfa.labels.clone()
+            labels: nfa.labels.clone(),
+            dead
         }
     }
 

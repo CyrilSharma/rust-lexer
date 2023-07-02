@@ -12,7 +12,7 @@ struct Generator<'a> {
 impl<'a> Generator<'a> {
     pub fn new(dfa: &'a DFA) -> Result<Self, Box<dyn Error>> {
         return Ok(Generator { 
-            dfa: dfa,
+            dfa,
             file: File::create("tokenizer.rs")?,
             tabs: String::new()
         });
