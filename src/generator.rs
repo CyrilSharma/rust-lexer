@@ -43,7 +43,7 @@ impl<'a> Generator<'a> {
     pub fn generate(&mut self) -> Result<(), Box<dyn Error>> {
         self.writeln("use std::fs;")?;
         self.writeln("use Token::*;")?;
-        self.writeln("#[derive(Copy, Clone, Debug, PartialEq, Eq)]")?;
+        self.writeln("#[derive(Debug, PartialEq, Eq)]")?;
         self.writeln("pub enum Token {")?;
         self.indent();
         for label in &self.dfa.labels {
@@ -53,6 +53,7 @@ impl<'a> Generator<'a> {
         self.writeln("EOF")?;
         self.unindent();
         self.writeln("}")?;
+        self.writeln("#[derive(Debug, PartialEq, Eq)]")?;
         self.write_vec(&[
             "pub enum TokenErr {",
             "   Err",
@@ -79,7 +80,7 @@ impl<'a> Generator<'a> {
             "    }",
         ])?;
         self.indent();
-        self.writeln("fn next(&mut self) -> Result<Token, TokenErr> {")?;
+        self.writeln("pub fn next(&mut self) -> Result<Token, TokenErr> {")?;
         self.indent();
         self.write_automota()?;
         self.unindent();
@@ -91,19 +92,21 @@ impl<'a> Generator<'a> {
 
     fn write_automota(&mut self) -> Result<(), Box<dyn Error>> {
         self.write_vec(&[
+            "if self.pos == self.chars.len() { return Ok(EOF); }",
             "let mut stk: Vec<usize> = Vec::new();",
             "let mut chars: Vec<char> = Vec::new();",
             "let mut state: usize = 0;",
             "loop {",
         ])?;
         self.indent();
-        self.writeln("if self.pos == self.chars.len() { return Ok(EOF); }")?;
+        self.writeln("if self.pos == self.chars.len() { break; }")?;
         self.writeln("let c = self.nextchar();")?;
         self.writeln("state = match state {")?;
         self.indent();
         for state in 0..self.dfa.ncount {
             self.write_transitions(state)?;
         }
+        self.writeln("_ => return Err(TokenErr::Err)")?;
         self.unindent();
         self.writeln("};")?;
         self.writeln("stk.push(state);")?;
@@ -114,10 +117,10 @@ impl<'a> Generator<'a> {
             "while self.accepts[state] == 0 {",
             "   if stk.len() == 0 { return Err(TokenErr::Err); }",
             "   state = stk.pop().unwrap();",
-            "   chars = chars.pop().unwrap();",
+            "   chars.pop().unwrap();",
             "}"
         ])?;
-        self.writeln("let word : String = chars.iter.collect();")?;
+        self.writeln("let word : String = chars.iter().collect();")?;
         self.writeln("match self.accepts[state] {")?;
         self.indent();
         for idx in 0..self.dfa.accepts.len() {
@@ -127,11 +130,11 @@ impl<'a> Generator<'a> {
                 continue;
             }
             self.writeln(&format!(
-                "{idx} => return Ok({}(word)),",
-                self.dfa.labels[acc - 1],
+                "{:4} => return Ok({}(word)),",
+                idx, self.dfa.labels[acc - 1],
             ))?;
         }
-        self.writeln("_ => return Err(TokenErr::Err)")?;
+        self.writeln("   _ => return Err(TokenErr::Err)")?;
         self.unindent();
         self.writeln("}")?;
         return Ok(());

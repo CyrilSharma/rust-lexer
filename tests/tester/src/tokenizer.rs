@@ -1,14 +1,15 @@
 use std::fs;
 use Token::*;
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Token {
 	WHILE(String),
 	FOR(String),
 	LPAR(String),
 	RPAR(String),
 	IDENT(String),
-    EOF
+	EOF
 }
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenErr {
    Err
 }
@@ -36,12 +37,13 @@ impl Lexer {
         self.pos += 1;
         return self.chars[self.pos - 1];
     }
-	fn next(&mut self) -> Result<Token, TokenErr> {
+	pub fn next(&mut self) -> Result<Token, TokenErr> {
+		if self.pos == self.chars.len() { return Ok(EOF); }
 		let mut stk: Vec<usize> = Vec::new();
-		let mut chars: Vec<Char> = Vec::new();
+		let mut chars: Vec<char> = Vec::new();
 		let mut state: usize = 0;
 		loop {
-			if pos == self.chars.len() { return EOF; }
+			if self.pos == self.chars.len() { break; }
 			let c = self.nextchar();
 			state = match state {
 				0 => match c {
@@ -168,33 +170,34 @@ impl Lexer {
 					_ => break
 				},
 				20 => 0,
+				_ => return Err(TokenErr::Err)
 			};
 			stk.push(state);
 			chars.push(c);
 		}
 		while self.accepts[state] == 0 {
-		   if stk.len() == 0 { return TokenErr::Err; }
+		   if stk.len() == 0 { return Err(TokenErr::Err); }
 		   state = stk.pop().unwrap();
-		   chars = chars.pop().unwrap();
+		   chars.pop().unwrap();
 		}
-		let word : String = chars.iter.collect();
+		let word : String = chars.iter().collect();
 		match self.accepts[state] {
-			3 => return LPAR(word),
-			4 => return RPAR(word),
-			5 => return IDENT(word),
-			6 => return IDENT(word),
-			7 => return IDENT(word),
-			8 => return IDENT(word),
-			9 => return IDENT(word),
-			10 => return IDENT(word),
-			11 => return IDENT(word),
-			12 => return IDENT(word),
-			13 => return IDENT(word),
-			14 => return IDENT(word),
-			15 => return WHILE(word),
-			16 => return IDENT(word),
-			17 => return FOR(word),
-			_ => return TokenErr::Err
+			   3 => return Ok(LPAR(word)),
+			   4 => return Ok(RPAR(word)),
+			   5 => return Ok(IDENT(word)),
+			   6 => return Ok(IDENT(word)),
+			   7 => return Ok(IDENT(word)),
+			   8 => return Ok(IDENT(word)),
+			   9 => return Ok(IDENT(word)),
+			  10 => return Ok(IDENT(word)),
+			  11 => return Ok(IDENT(word)),
+			  12 => return Ok(IDENT(word)),
+			  13 => return Ok(IDENT(word)),
+			  14 => return Ok(IDENT(word)),
+			  15 => return Ok(WHILE(word)),
+			  16 => return Ok(IDENT(word)),
+			  17 => return Ok(FOR(word)),
+			   _ => return Err(TokenErr::Err)
 		}
 	}
 }
