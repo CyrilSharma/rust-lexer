@@ -152,7 +152,7 @@ impl<'a> Generator<'a> {
         let accepts = self.dfa.accepts[state];
         if self.dfa.accepts[state] != 0 &&
             self.dfa.labels[accepts - 1].len() == 0 {
-            self.writeln(&format!("{state} => 0,"))?;
+            self.writeln(&format!("{state} => {{ self.pos -= 1; state = 0; continue; }},"))?;
             return Ok(());
         }
         self.writeln(&format!("{state} => match c {{"))?;
