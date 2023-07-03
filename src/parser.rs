@@ -114,35 +114,44 @@ impl<T: TokenGiver> Parser<T> {
                 return Ok(node);
             },
             CHAR(c) => return Ok(Node::Char(c)),
-            GROUP(LBR) => return Ok(self.dashes()?),
+            GROUP(LBR) => return Ok(self.bracketed()?),
             token => Err(ParseError::Parse(
                 format!("Atom: Expected CHAR, [, (, but found {:?}", token)
             ))
         }
     }
 
-    fn dashes(&mut self) -> Result<Node, ParseError> {
+    fn bracketed(&mut self) -> Result<Node, ParseError> {
         let mut root: Option<Node> = None;
         loop { match self.cur {
             CHAR(_) => {
-                let dash = self.dash()?;
-                match root {
-                    None => root = Some(dash),
-                    Some(node) => root = Some(Node::BinaryExpr(
+                let res = match self.lexer.peek()? {
+                    OP(DASH) => self.dash()?,
+                    CHAR(_) | GROUP(RBR) => self.atom()?,
+                    t => return Err(ParseError::Parse(format!(
+                        "Expected Char or Dash got {:?}", t)
+                    )),
+                };
+                root = match root {
+                    None => Some(res),
+                    Some(node) => Some(Node::BinaryExpr(
                         BinaryExprNode { 
                             left: Box::new(node), 
-                            right: Box::new(dash), 
+                            right: Box::new(res), 
                             op: BAR 
                         }
                     ))
                 }
             },
-            _ => break
+            GROUP(RBR) => break,
+            t => return Err(ParseError::Parse(format!(
+                "Expected ] or Char got {:?}", t
+            )))
         }}
         self.consume(GROUP(RBR), "Dashes")?;
         match root {
             None => return Err(ParseError::Parse(
-                format!("Dashes: No Dash Found")
+                format!("Invalid Bracketed Expression")
             )),
             Some(node) => return Ok(node)
         }
@@ -204,103 +213,19 @@ mod tests {
     use super::*;
     use std::{fs, path::Path};
     use crate::lexer::Lexer;
-    struct TokenReader { pos: u32, tokens: Vec<Token> } 
-    impl TokenReader {
-        pub fn new(path: String) -> Self {
-            let mut tokens: Vec<Token> = Vec::new();
-            let words: Vec<String> = fs::read_to_string(path)
-                .expect("File Doesn't Exist")
-                .replace(' ', "")
-                .replace('\n', "")
-                .split(',')
-                .map(|s| s.to_string())
-                .collect();
-            for word in words {
-                let token = match word.as_str() {
-                    "STAR" | "OP(STAR)"         => OP(STAR),
-                    "PLUS" | "OP(PLUS)"         => OP(PLUS),
-                    "QUESTION" | "OP(QUESTION)" => OP(QUESTION),
-                    "BAR" | "OP(BAR)"           => OP(BAR),
-                    "DASH" | "OP(DASH)"         => OP(DASH),
-                    "AND" | "OP(AND)"           => OP(AND),
-                    "DBQ" | "GROUP(DBQ)"        => GROUP(DBQ),
-                    "LBR" | "GROUP(LBR)"        => GROUP(LBR),
-                    "RBR" | "GROUP(RBR)"        => GROUP(RBR),
-                    "LCR" | "GROUP(LCR)"        => GROUP(LCR),
-                    "RCR" | "GROUP(RCR)"        => GROUP(RCR),
-                    "LPR" | "GROUP(LPR)"        => GROUP(LPR),
-                    "RPR" | "GROUP(RPR)"        => GROUP(RPR),
-                    ";" | "SEMI"                => SEMI,
-                    "EOF"                       => EOF,
-                    "CHAR('')"                  => CHAR(' '),   // edge case
-                    s => {
-                        let res: Token;
-                        let parsed_chars: Vec<char> = s.chars().collect();
-                        if s.len() == 1      { res = CHAR(parsed_chars[0]); }
-                        else if s.len() >= 9 {
-                            if parsed_chars[6] == '\\' {
-                                match parsed_chars[7] {
-                                    'n'  => res = CHAR('\n'),
-                                    't'  => res = CHAR('\t'),
-                                    'r'  => res = CHAR('\r'),
-                                    '\\' | ']' | '[' | ')' | '(' |
-                                    '-' | '*' | ';' | '+' | '"' | '\'' => {
-                                        res = CHAR(parsed_chars[7]);
-                                    }
-                                    _ => panic!("Unrecognized Token")
-                                }
-                            } else {
-                                res = CHAR(parsed_chars[6]);
-                            }
-                        }
-                        else {
-                            panic!("Unrecognized Token: {}", s);
-                        }
-                        res
-                    }
-                };
-                tokens.push(token);
-            }
-            return TokenReader { pos: 0, tokens };
-        }
-    }
-
-    impl TokenGiver for TokenReader {
-        fn next(&mut self) -> Result<Token, TokenErr> {
-            self.pos += 1; 
-            //println!("Token: {:?}", self.tokens[(self.pos - 1) as usize]);
-            return Ok(self.tokens[(self.pos - 1) as usize]);
-        }
-    }
-
-    #[test]
-    fn right_wrong() {
-        let path = "tests/data/parser/input";
-        for id in ["right", "wrong"] {
-            let mut i = 0;
-            while Path::new(&format!("{path}/{id}-{i}.txt")).exists() {
-                let tr = TokenReader::new(format!("{path}/{id}-{i}.txt"));
-                let mut parser = Parser::new(tr).expect("Invalid Token Stream");
-                let matches = parser.parse();
-                assert!((id == "right") == !matches.is_err());
-                i += 1
-            }
-        }
-    }
 
     #[test]
     fn ast() {
-        let inpath = "tests/data/parser/input";
-        let outpath = "tests/data/parser/output";
-
         let mut i = 0;
-        while Path::new(&format!("{inpath}/ast-{i}")).exists() {
-            let tr = Lexer::new(inpath).expect("File Doesn't Exist");
+        while Path::new(&format!("tests/data/parser/input/AST-{i}.txt")).exists() {
+            let inpath = &format!("tests/data/parser/input/AST-{i}.txt");
+            let outpath = &format!("tests/data/parser/output/AST-{i}.txt");
+            let tr = Lexer::new(&inpath).expect("File Doesn't Exist");
             let mut parser = Parser::new(tr).expect("Invalid Token Stream");
             let matches = parser.parse().expect("Expression should be valid.");
             for m in matches { 
                 let ans: String = fs::read_to_string(outpath).expect("File doesn't exist.");
-                assert!(ans.trim() != m.root.to_string().trim());
+                assert!(ans.trim() == m.root.to_string().trim());
             }
             i += 1;
         }

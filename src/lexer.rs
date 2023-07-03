@@ -5,6 +5,7 @@ use Op::*;
 
 pub trait TokenGiver { 
     fn next(&mut self) -> Result<Token, TokenErr>;
+    fn peek(&mut self) -> Result<Token, TokenErr>;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -123,6 +124,13 @@ impl TokenGiver for Lexer {
                 }
             }
         }
+    }
+
+    fn peek(&mut self) -> Result<Token, TokenErr> {
+        let pos = self.pos;
+        let res = self.next();
+        self.pos = pos;
+        return res;
     }
 }
 

@@ -4,5 +4,5 @@ EXPR         => TERM ('|' TERM)*
 TERM         => FACTOR*
 FACTOR       => ATOM ('*' | '+' | '?')?
 ATOM         => CHAR | '(' EXPR ')' | DASH
-DASH         => [ RANGE* ]
+DASH         => [ (RANGE | CHAR)* ]
 RANGE        => a-z, 0-9...

@@ -213,7 +213,6 @@ impl<'a> Generator<'a> {
                 idx += 1
             }
             res.push_str(&format!("\t\t\t{}\n", self.dfa.accepts[idx]));
-            idx += 1
         }
         res.push_str("\t\t];");
         return res;
