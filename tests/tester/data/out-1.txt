@@ -1,0 +1,1 @@
+HELLO("hello"), BEEP("beep"), HUM("hum"), FOR("for"), LOL("lol"), LOL("lol"), FOR("for"), BEEP("beep"), HUM("hum"), FOR("for"), LOL("lol"), EOF

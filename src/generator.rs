@@ -104,7 +104,13 @@ impl<'a> Generator<'a> {
         self.writeln("state = match state {")?;
         self.indent();
         for state in 0..self.dfa.ncount {
-            self.write_transitions(state)?;
+            if state == self.dfa.dead {
+                self.writeln(&format!(
+                    "{} => break,", self.dfa.dead
+                ))?;
+            } else {
+                self.write_transitions(state)?;
+            }
         }
         self.writeln("_ => return Err(TokenErr::Err)")?;
         self.unindent();
@@ -114,14 +120,16 @@ impl<'a> Generator<'a> {
         self.unindent();
         self.writeln("}")?;
         self.write_vec(&[
-            "while self.accepts[state] == 0 {",
-            "   if stk.len() == 0 { return Err(TokenErr::Err); }",
-            "   state = stk.pop().unwrap();",
+            "while stk.len() > 0 &&",
+            "   self.accepts[stk[stk.len() - 1]] == 0 {",
+            "   stk.pop().unwrap();",
             "   chars.pop().unwrap();",
-            "}"
+            "   self.pos -= 1;",
+            "}",
+            "if stk.len() == 0 { return Err(TokenErr::Err); }"
         ])?;
         self.writeln("let word : String = chars.iter().collect();")?;
-        self.writeln("match self.accepts[state] {")?;
+        self.writeln("match stk[stk.len() - 1] {")?;
         self.indent();
         for idx in 0..self.dfa.accepts.len() {
             let acc = self.dfa.accepts[idx];
@@ -130,11 +138,11 @@ impl<'a> Generator<'a> {
                 continue;
             }
             self.writeln(&format!(
-                "{:4} => return Ok({}(word)),",
+                "{:<4} => return Ok({}(word)),",
                 idx, self.dfa.labels[acc - 1],
             ))?;
         }
-        self.writeln("   _ => return Err(TokenErr::Err)")?;
+        self.writeln("_    => return Err(TokenErr::Err)")?;
         self.unindent();
         self.writeln("}")?;
         return Ok(());
@@ -182,7 +190,7 @@ impl<'a> Generator<'a> {
             }
             j += 1;
         }
-        self.writeln("_ => break")?;
+        self.writeln(&format!("_ => {}", self.dfa.dead))?;
         self.unindent();
         self.writeln("},")?;
         return Ok(());
@@ -202,8 +210,10 @@ impl<'a> Generator<'a> {
         if self.dfa.ncount%5 > 0 {
             for _ in 0..(self.dfa.ncount%5 - 1) {
                 res.push_str(&format!("\t\t\t{}, ", self.dfa.accepts[idx]));
+                idx += 1
             }
             res.push_str(&format!("\t\t\t{}\n", self.dfa.accepts[idx]));
+            idx += 1
         }
         res.push_str("\t\t];");
         return res;

@@ -2,11 +2,11 @@ use std::fs;
 use Token::*;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Token {
-	WHILE(String),
+	HELLO(String),
 	FOR(String),
-	LPAR(String),
-	RPAR(String),
-	IDENT(String),
+	LOL(String),
+	BEEP(String),
+	HUM(String),
 	EOF
 }
 #[derive(Debug, PartialEq, Eq)]
@@ -16,7 +16,7 @@ pub enum TokenErr {
 pub struct Lexer {
   chars:   Vec<char>,
   pos:     usize,
-  accepts: [usize; 21]
+  accepts: [usize; 23]
 }
 impl Lexer {
     pub fn new(fname: &str) -> Result<Self, Box<dyn std::error::Error>> {
@@ -24,11 +24,11 @@ impl Lexer {
             .chars()
             .collect();
 		let accepts = [
-			0, 			0, 			0, 			3, 			4,
-			5, 			5, 			5, 			5, 			5,
-			5, 			5, 			5, 			5, 			5,
-			1, 			5, 			2, 			0, 			0,
-			6
+			0, 			0, 			6, 			6, 			6,
+			6, 			0, 			0, 			0, 			0,
+			0, 			3, 			0, 			0, 			5,
+			0, 			0, 			1, 			0, 			2,
+			0, 			0, 			4
 		];
         return Ok(Lexer { chars, pos: 0, accepts });
     }
@@ -47,157 +47,105 @@ impl Lexer {
 			let c = self.nextchar();
 			state = match state {
 				0 => match c {
-					' ' => 2,
-					'(' => 3,
-					')' => 4,
-					'A'..='Z' => 5,
-					'a'..='e' => 6,
+					'\t' => 2,
+					'\n' => 3,
+					'\r' => 4,
+					' ' => 5,
+					'b' => 6,
 					'f' => 7,
-					'g'..='v' => 6,
-					'w' => 8,
-					'x'..='z' => 6,
-					_ => break
+					'h' => 8,
+					'l' => 9,
+					_ => 1
 				},
-				1 => match c {
-					_ => break
-				},
-				2 => match c {
-					'\t' => 18,
-					_ => break
-				},
-				3 => match c {
-					_ => break
-				},
-				4 => match c {
-					_ => break
-				},
-				5 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
-				},
+				1 => break,
+				2 => 0,
+				3 => 0,
+				4 => 0,
+				5 => 0,
 				6 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
+					'e' => 20,
+					_ => 1
 				},
 				7 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='n' => 11,
-					'o' => 16,
-					'p'..='z' => 11,
-					_ => break
+					'o' => 18,
+					_ => 1
 				},
 				8 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='g' => 11,
-					'h' => 12,
-					'i'..='z' => 11,
-					_ => break
+					'e' => 12,
+					'u' => 13,
+					_ => 1
 				},
 				9 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
+					'o' => 10,
+					_ => 1
 				},
 				10 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
+					'l' => 11,
+					_ => 1
 				},
 				11 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
+					_ => 1
 				},
 				12 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='h' => 11,
-					'i' => 13,
-					'j'..='z' => 11,
-					_ => break
+					'l' => 15,
+					_ => 1
 				},
 				13 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='k' => 11,
-					'l' => 14,
-					'm'..='z' => 11,
-					_ => break
+					'm' => 14,
+					_ => 1
 				},
 				14 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='d' => 11,
-					'e' => 15,
-					'f'..='z' => 11,
-					_ => break
+					_ => 1
 				},
 				15 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
+					'l' => 16,
+					_ => 1
 				},
 				16 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='q' => 11,
-					'r' => 17,
-					's'..='z' => 11,
-					_ => break
+					'o' => 17,
+					_ => 1
 				},
 				17 => match c {
-					'0'..='9' => 9,
-					'A'..='Z' => 10,
-					'a'..='z' => 11,
-					_ => break
+					_ => 1
 				},
 				18 => match c {
-					'\n' => 19,
-					_ => break
+					'r' => 19,
+					_ => 1
 				},
 				19 => match c {
-					'\r' => 20,
-					_ => break
+					_ => 1
 				},
-				20 => 0,
+				20 => match c {
+					'e' => 21,
+					_ => 1
+				},
+				21 => match c {
+					'p' => 22,
+					_ => 1
+				},
+				22 => match c {
+					_ => 1
+				},
 				_ => return Err(TokenErr::Err)
 			};
 			stk.push(state);
 			chars.push(c);
 		}
-		while self.accepts[state] == 0 {
-		   if stk.len() == 0 { return Err(TokenErr::Err); }
-		   state = stk.pop().unwrap();
+		while stk.len() > 0 &&
+		   self.accepts[stk[stk.len() - 1]] == 0 {
+		   stk.pop().unwrap();
 		   chars.pop().unwrap();
+		   self.pos -= 1;
 		}
+		if stk.len() == 0 { return Err(TokenErr::Err); }
 		let word : String = chars.iter().collect();
-		match self.accepts[state] {
-			   3 => return Ok(LPAR(word)),
-			   4 => return Ok(RPAR(word)),
-			   5 => return Ok(IDENT(word)),
-			   6 => return Ok(IDENT(word)),
-			   7 => return Ok(IDENT(word)),
-			   8 => return Ok(IDENT(word)),
-			   9 => return Ok(IDENT(word)),
-			  10 => return Ok(IDENT(word)),
-			  11 => return Ok(IDENT(word)),
-			  12 => return Ok(IDENT(word)),
-			  13 => return Ok(IDENT(word)),
-			  14 => return Ok(IDENT(word)),
-			  15 => return Ok(WHILE(word)),
-			  16 => return Ok(IDENT(word)),
-			  17 => return Ok(FOR(word)),
-			   _ => return Err(TokenErr::Err)
+		match stk[stk.len() - 1] {
+			11   => return Ok(LOL(word)),
+			14   => return Ok(HUM(word)),
+			17   => return Ok(HELLO(word)),
+			19   => return Ok(FOR(word)),
+			22   => return Ok(BEEP(word)),
+			_    => return Err(TokenErr::Err)
 		}
 	}
 }

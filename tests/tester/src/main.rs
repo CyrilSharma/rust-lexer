@@ -5,8 +5,8 @@ mod tokenizer;
 use tokenizer::{Lexer, Token};
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let inpath = args.get(1).unwrap();
-    let outpath = args.get(2).unwrap();
+    let inpath = args.get(1).expect("Inpath must be specified!");
+    let outpath = args.get(2).expect("Outpath must be specified!");
     let mut lx = Lexer::new(inpath).expect("File Exists");
     let mut tokens: String = String::new();
     loop { match lx.next() {
