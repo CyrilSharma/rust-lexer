@@ -53,30 +53,10 @@ impl Node {
                 out.push_str(&format!("{tabs}</{:?}>\n", n.op));
             },
             Node::Char(c) => {
-                // just so I don't get xml issues.
-                let name: String = match c {
-                    'A'..='Z' | 'a'..='z' => c.to_string(),
-                    '0' => "ZERO".to_string(),
-                    '1' => "ONE".to_string(),
-                    '2' => "TWO".to_string(),
-                    '3' => "THREE".to_string(),
-                    '4' => "FOUR".to_string(),
-                    '5' => "FIVE".to_string(),
-                    '6' => "SIX".to_string(),
-                    '7' => "SEVEN".to_string(),
-                    '8' => "EIGHT".to_string(),
-                    '9' => "NINE".to_string(),
-                    '|' => "BAR".to_string(),
-                    ']' => "SQRBRKR".to_string(),
-                    '[' => "SQRBRKL".to_string(),
-                    '}' => "SQRBRKR".to_string(),
-                    '{' => "SQRBRKL".to_string(),
-                    '\\' => "BSLASH".to_string(),
-                    '/' => "FSLASH".to_string(),
-                    '\n' => "NEWLINE".to_string(),
-                    _ => panic!("Not Implemented!")
-                };
-                out.push_str(&format!("{tabs}<{name}> </{name}>\n"));
+                out.push_str(&format!(
+                    "{tabs}<\"{}\"> </\"{}\">\n",
+                    c.escape_debug(), c.escape_debug()
+                ));
             }
         }
     }

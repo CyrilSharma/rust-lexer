@@ -24,15 +24,37 @@ impl NFA {
         let root = nfa.make_node();
         for m in matches {
             if m.name.len() == 0 {
-                let (start, end) = nfa.build(&m.root);
-                nfa.add_eps(end, root);
-                nfa.add_eps(root, start);
+                nfa.handle_whitespace(&m.root);
             } else {
                 let node = NFA::build_ast(&mut nfa, m);
                 nfa.add_eps(root,node);
             }
         }
         return nfa;
+    }
+
+    fn handle_whitespace(&mut self, ast: &ast::Node) {
+        match ast {
+            ast::Node::BinaryExpr(_) => {
+                let mut stk: Vec<&ast::Node> = vec![ast; 1];
+                while let Some(state) = stk.pop() {
+                    match state {
+                        ast::Node::BinaryExpr(node) => {
+                            if let lexer::Op::BAR = node.op {
+                                stk.push(&node.left);
+                                stk.push(&node.right);
+                            } else {
+                                panic!("You used something besides or in whitespace!");
+                            }
+                        },
+                        ast::Node::Char(c) => self.add(0, 0, *c),
+                        _ => panic!("Neither Char no Or in whitespace!")
+                    }
+                }
+            },
+            ast::Node::Char(c) => self.add(0, 0, *c),
+            _ => panic!("White Space should be single or-seperated tokens!")
+        }
     }
 
     fn build_ast(nfa: &mut NFA, m: &Match) -> usize {
@@ -158,6 +180,45 @@ impl NFA {
         self.accepts.push(0);
         return self.ncount - 1;
     }
+
+    // #[cfg(test)]
+    #[allow(dead_code)]
+    pub fn print_dot(&self) {
+        println!("digraph NFA {{");
+        for state in 0..self.ncount {
+            let mut ind = 0;
+            while ind < u8::MAX {
+                let nbr = self.jumps[state][ind as usize];
+                if nbr == NULL { ind += 1; continue };
+
+                let start = ind;
+                while ind + 1 < u8::MAX &&
+                    self.jumps[state][(ind + 1) as usize] == nbr {
+                    ind += 1;
+                }
+
+                if start == ind {
+                    println!("\t{} -> {} [label=\"{}\"];",
+                        state, nbr, (ind as char).escape_debug()
+                    );
+                } else {
+                    println!("\t{} -> {} [label=\"{}\"];",
+                        state, nbr,
+                        format!("{}-{}", (start as char).escape_debug(),
+                            (ind as char).escape_debug()
+                        )
+                    );
+                }
+                ind += 1;
+            }
+            for nbr in &self.eps[state] {
+                println!("\t{} -> {} [label=\"eps\"];",
+                    state, *nbr
+                );
+            }
+        }
+        println!("}}");
+    }
 }
 
 #[cfg(test)]
@@ -207,42 +268,6 @@ mod tests {
                 }
             }
             return closure;
-        }
-
-        #[allow(dead_code)]
-        fn print_dot(&self) {
-            println!("digraph TransitionTable {{");
-            for state in 0..self.ncount {
-                let mut ind = 0;
-                while ind < u8::MAX {
-                    let nbr = self.jumps[state][ind as usize];
-                    if nbr == NULL { ind += 1; continue };
-
-                    let start = ind;
-                    while ind + 1 < u8::MAX &&
-                        self.jumps[state][(ind + 1) as usize] == nbr {
-                        ind += 1;
-                    }
-
-                    if start == ind {
-                        println!("\t{} -> {} [label=\"{}\"];",
-                            state, nbr, ind as char
-                        );
-                    } else {
-                        println!("\t{} -> {} [label=\"{}\"];",
-                            state, nbr,
-                            format!("{}-{}", start as char, ind as char)
-                        );
-                    }
-                    ind += 1;
-                }
-                for nbr in &self.eps[state] {
-                    println!("\t{} -> {} [label=\"eps\"];",
-                        state, *nbr
-                    );
-                }
-            }
-            println!("}}");
         }
     }
 

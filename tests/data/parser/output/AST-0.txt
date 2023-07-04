@@ -2,15 +2,15 @@
   <AND>
     <AND>
       <STAR>
-        <a> </a>
+        <"a"> </"a">
       </STAR>
       <STAR>
-        <b> </b>
+        <"b"> </"b">
       </STAR>
     </AND>
     <STAR>
-      <c> </c>
+      <"c"> </"c">
     </STAR>
   </AND>
-  <d> </d>
+  <"d"> </"d">
 </AND>

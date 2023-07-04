@@ -1,1 +1,1 @@
-SUNSHINE("sunshine"), JOY("joy"), MOON("moon"), TRAVEL(" travel"), EXPLORE("explore"), JOY("joy"), HAPPY("happy"), SUNSHINE("sunshine"), EOF
+SUNSHINE("sunshine"), JOY("joy"), MOON("moon"), TRAVEL("travel"), EXPLORE("explore"), JOY("joy"), HAPPY("happy"), SUNSHINE("sunshine"), EOF

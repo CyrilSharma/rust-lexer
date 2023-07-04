@@ -154,6 +154,15 @@ impl<'a> Generator<'a> {
         let mut j = 0;
         while j < u8::MAX {
             let nbr = self.dfa.jumps[state][j as usize];
+            // the only self-transitions are from whitespace.
+            if state == 0 && nbr == 0 {
+                self.writeln(&format!("\'{}\' => {},",
+                    escape(j as char),
+                    "continue"
+                ))?;
+                j += 1;
+                continue;
+            }
             if nbr == dfa::NULL { j += 1; continue; };
             if self.dfa.dead == nbr { j += 1; continue; }
             //println!("{} - {}", self.dfa.dead, nbr);
@@ -195,18 +204,18 @@ impl<'a> Generator<'a> {
         let mut idx = 0;
         while (self.dfa.ncount-idx) / 5 > 0 { 
             for _ in 0..4 {
-                res.push_str(&format!("\t\t\t{}, ", self.dfa.accepts[idx]));
+                res.push_str(&format!("\t\t\t{:>4}, ", self.dfa.accepts[idx]));
                 idx += 1;
             }
-            res.push_str(&format!("\t\t\t{},\n", self.dfa.accepts[idx]));
+            res.push_str(&format!("\t\t\t{:>4},\n", self.dfa.accepts[idx]));
             idx += 1;
         }
         if self.dfa.ncount%5 > 0 {
             for _ in 0..(self.dfa.ncount%5 - 1) {
-                res.push_str(&format!("\t\t\t{}, ", self.dfa.accepts[idx]));
+                res.push_str(&format!("\t\t\t{:>4}, ", self.dfa.accepts[idx]));
                 idx += 1
             }
-            res.push_str(&format!("\t\t\t{}\n", self.dfa.accepts[idx]));
+            res.push_str(&format!("\t\t\t{:>4}\n", self.dfa.accepts[idx]));
         }
         res.push_str("\t\t];");
         return res;

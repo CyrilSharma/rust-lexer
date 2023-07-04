@@ -161,6 +161,40 @@ impl DFA {
         }
         return 0;
     }
+
+    // #[cfg(test)]
+    #[allow(dead_code)]
+    pub fn print_dot(&self) {
+        println!("digraph DFA {{");
+        for state in 0..self.ncount {
+            let mut ind = 0;
+            while ind < u8::MAX {
+                let nbr = self.jumps[state][ind as usize];
+                if nbr == NULL { ind += 1; continue };
+
+                let start = ind;
+                while ind + 1 < u8::MAX &&
+                    self.jumps[state][(ind + 1) as usize] == nbr {
+                    ind += 1;
+                }
+
+                if start == ind {
+                    println!("\t{} -> {} [label=\"{}\"];",
+                        state, nbr, (ind as char).escape_debug()
+                    );
+                } else {
+                    println!("\t{} -> {} [label=\"{}\"];",
+                        state, nbr,
+                        format!("{}-{}", (start as char).escape_debug(), 
+                            (ind as char).escape_debug()
+                        )
+                    );
+                }
+                ind += 1;
+            }
+        }
+        println!("}}");
+    }
 }
 
 #[cfg(test)]
@@ -179,36 +213,6 @@ mod tests {
                 state = nxt;
             }
             return self.accepts[state] != 0;
-        }
-        #[allow(dead_code)]
-        fn print_dot(&self) {
-            println!("digraph TransitionTable {{");
-            for state in 0..self.ncount {
-                let mut ind = 0;
-                while ind < u8::MAX {
-                    let nbr = self.jumps[state][ind as usize];
-                    if nbr == NULL { ind += 1; continue };
-
-                    let start = ind;
-                    while ind + 1 < u8::MAX &&
-                        self.jumps[state][(ind + 1) as usize] == nbr {
-                        ind += 1;
-                    }
-
-                    if start == ind {
-                        println!("\t{} -> {} [label=\"{}\"];",
-                            state, nbr, ind as char
-                        );
-                    } else {
-                        println!("\t{} -> {} [label=\"{}\"];",
-                            state, nbr,
-                            format!("{}-{}", start as char, ind as char)
-                        );
-                    }
-                    ind += 1;
-                }
-            }
-            println!("}}");
         }
     }
 
@@ -248,8 +252,6 @@ mod tests {
             let mut parser = Parser::new(lexer).expect("File should be non-empty!");
             let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
             let dfa = DFA::compress(DFA::subset_construction(nfa));
-
-            dfa.print_dot();
             for id in ["right", "wrong"] {
                 let file = File::open(&format!("{path}/{id}-words-{i}.txt"))
                     .expect("Should be valid...");

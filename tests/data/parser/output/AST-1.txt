@@ -2,29 +2,29 @@
   <STAR>
     <BAR>
       <DASH>
-        <a> </a>
-        <z> </z>
+        <"a"> </"a">
+        <"z"> </"z">
       </DASH>
       <DASH>
-        <A> </A>
-        <Z> </Z>
+        <"A"> </"A">
+        <"Z"> </"Z">
       </DASH>
     </BAR>
   </STAR>
   <BAR>
     <BAR>
       <DASH>
-        <a> </a>
-        <z> </z>
+        <"a"> </"a">
+        <"z"> </"z">
       </DASH>
       <DASH>
-        <A> </A>
-        <Z> </Z>
+        <"A"> </"A">
+        <"Z"> </"Z">
       </DASH>
     </BAR>
     <DASH>
-      <ZERO> </ZERO>
-      <NINE> </NINE>
+      <"0"> </"0">
+      <"9"> </"9">
     </DASH>
   </BAR>
 </AND>
