@@ -182,6 +182,7 @@ impl NFA {
     }
 
     // #[cfg(test)]
+    #[cfg(debug_assertions)]
     #[allow(dead_code)]
     pub fn print_dot(&self) {
         println!("digraph NFA {{");

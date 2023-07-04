@@ -1,10 +1,33 @@
-"while"                       WHILE;
-"for"                         FOR;
+"if"                          IF;
+"else"                        ELSE;
+"int"                         INT;
+"float"                       FLOAT;
+"string"                      STRING;
+
+"\+"                          PLUS;
+"\-"                          MINUS;
+"\*"                          MULTIPLY;
+"/"                           DIVIDE;
+
+"="                           ASSIGN;
+"=="                          EQUALS;
+"!="                          NOT_EQUALS;
+">"                           GREATER_THAN;
+"<"                           LESS_THAN;
+">="                          GREATER_THAN_OR_EQUAL;
+"<="                          LESS_THAN_OR_EQUAL;
+
+"\{"                          LBRACE;
+"\}"                          RBRACE;
+"\["                          LBRACKET;
+"\]"                          RBRACKET;
 "\("                          LPAR;
 "\)"                          RPAR;
-"[a-zA-Z]([a-zA-Z]|[0-9])*"   IDENT;
 
-# Ignore Whitespace.
-" |\t|\n|\r"                  ;
+"true"                        TRUE;
+"false"                       FALSE;
 
-# [, ], {, }, -, *, (, ), EXP
+"[a-zA-Z][a-zA-Z0-9]*"        IDENT;
+"[0-9]*"                      NUMBER;
+
+"[ \n\r\t]"                   ;

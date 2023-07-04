@@ -21,6 +21,7 @@ impl DFA {
     }
 
     // TODO: Hycroft algorithm (guaranteed nlog(n))
+    // https://www.cs.cornell.edu/courses/cs2800/2013fa/Handouts/minimization.pdf
     pub fn compress(dfa: DFA) -> Self {
         let mut table = vec![vec![false; dfa.ncount]; dfa.ncount];
         for i in 0..table.len() {
@@ -162,7 +163,7 @@ impl DFA {
         return 0;
     }
 
-    // #[cfg(test)]
+    #[cfg(debug_assertions)]
     #[allow(dead_code)]
     pub fn print_dot(&self) {
         println!("digraph DFA {{");
