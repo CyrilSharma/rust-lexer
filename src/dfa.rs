@@ -67,7 +67,6 @@ impl DFA {
             for i in 0..u8::MAX as usize {
                 jumps[id[*rep]][i] = id[dfa.jumps[*rep][i]];
             }
-            dbg!(*rep); dbg!(id[*rep]);
             accepts[id[*rep]] = dfa.accepts[*rep];
         }
         return Self {

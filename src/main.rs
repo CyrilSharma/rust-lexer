@@ -13,7 +13,7 @@ fn main() {
     let lexer = Lexer::new(&inpath).expect("Invalid Path");
     let mut parser = Parser::new(lexer).expect("File should be non-empty!");
     let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
-    let dfa = DFA::subset_construction(nfa);
+    let dfa = DFA::compress(DFA::subset_construction(nfa));
     let mut gen = Generator::new(&dfa, outpath).expect("Outpath doesn't exist");
     gen.generate().expect("Write Error");
 }
