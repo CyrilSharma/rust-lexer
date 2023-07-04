@@ -1,8 +1,8 @@
-"hello";
-"your";
-"for";
-"async";
-"await";
-"ez";
-"cheese";
-"spinnach";
+"hello"        A;
+"your"         B;
+"for"          C;
+"async"        D;
+"await"        E;
+"ez"           F;
+"cheese"       G;
+"spinnach"     H;

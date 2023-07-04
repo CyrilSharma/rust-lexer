@@ -149,12 +149,6 @@ impl<'a> Generator<'a> {
     }
 
     fn write_transitions(&mut self, state: usize) -> Result<(), Box<dyn Error>> {
-        let accepts = self.dfa.accepts[state];
-        if self.dfa.accepts[state] != 0 &&
-            self.dfa.labels[accepts - 1].len() == 0 {
-            self.writeln(&format!("{state} => {{ self.pos -= 1; state = 0; continue; }},"))?;
-            return Ok(());
-        }
         self.writeln(&format!("{state} => match c {{"))?;
         self.indent();
         let mut j = 0;
@@ -243,7 +237,7 @@ mod tests {
         let lexer = Lexer::new(path).expect("Invalid Path");
         let mut parser = Parser::new(lexer).expect("File should be non-empty!");
         let nfa = NFA::build_from_matches(&parser.parse().expect("Invalid parse"));
-        let dfa = DFA::subset_construction(nfa);
+        let dfa = DFA::compress(DFA::subset_construction(nfa));
         let mut gen = Generator::new(&dfa, "tests/tokenizer.rs".to_string())
             .expect("Just Be Better");
         gen.generate().expect("WORK");

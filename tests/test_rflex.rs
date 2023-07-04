@@ -9,8 +9,11 @@ fn test_parse() {
         let out1 = Command::new("target/debug/rflex")
             .arg(genpath)
             .arg(tokpath)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
             .output()
             .expect("Failed to execute command");
+        println!("{}", String::from_utf8_lossy(&out1.stdout));
         assert!(out1.status.success(), "Generator Failed");
         
         let inpath = &format!("data/in-{i}.txt");
@@ -24,11 +27,10 @@ fn test_parse() {
             .current_dir("tests/tester")
             .output()
             .expect("Failed to execute command");        
+        println!("{}", String::from_utf8_lossy(&out2.stdout));
         if out2.status.success() {
-            println!("{}", String::from_utf8_lossy(&out2.stdout));
             assert!(0 == out2.status.code().unwrap());
         } else {
-            println!("{}", String::from_utf8_lossy(&out2.stdout));
             assert!(false, "Parsing Failed");
         }
         i += 1;

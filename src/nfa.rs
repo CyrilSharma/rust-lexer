@@ -23,8 +23,14 @@ impl NFA {
         let mut nfa = NFA::new();
         let root = nfa.make_node();
         for m in matches {
-            let node = NFA::build_ast(&mut nfa, m);
-            nfa.add_eps(root,node);
+            if m.name.len() == 0 {
+                let (start, end) = nfa.build(&m.root);
+                nfa.add_eps(end, root);
+                nfa.add_eps(root, start);
+            } else {
+                let node = NFA::build_ast(&mut nfa, m);
+                nfa.add_eps(root,node);
+            }
         }
         return nfa;
     }

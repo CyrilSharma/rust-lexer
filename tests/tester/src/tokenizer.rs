@@ -2,12 +2,32 @@ use std::fs;
 use Token::*;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Token {
-	SUNSHINE(String),
-	MOON(String),
-	JOY(String),
-	HAPPY(String),
-	TRAVEL(String),
-	EXPLORE(String),
+	IF(String),
+	ELSE(String),
+	INT(String),
+	FLOAT(String),
+	STRING(String),
+	PLUS(String),
+	MINUS(String),
+	MULTIPLY(String),
+	DIVIDE(String),
+	ASSIGN(String),
+	EQUALS(String),
+	NOT_EQUALS(String),
+	GREATER_THAN(String),
+	LESS_THAN(String),
+	GREATER_THAN_OR_EQUAL(String),
+	LESS_THAN_OR_EQUAL(String),
+	LBRACE(String),
+	RBRACE(String),
+	LBRACKET(String),
+	RBRACKET(String),
+	LPAR(String),
+	RPAR(String),
+	TRUE(String),
+	FALSE(String),
+	IDENT(String),
+	NUMBER(String),
 	EOF
 }
 #[derive(Debug, PartialEq, Eq)]
@@ -17,7 +37,7 @@ pub enum TokenErr {
 pub struct Lexer {
   chars:   Vec<char>,
   pos:     usize,
-  accepts: [usize; 39]
+  accepts: [usize; 57]
 }
 impl Lexer {
     pub fn new(fname: &str) -> Result<Self, Box<dyn std::error::Error>> {
@@ -25,14 +45,18 @@ impl Lexer {
             .chars()
             .collect();
 		let accepts = [
-			0, 			0, 			7, 			7, 			7,
-			7, 			0, 			0, 			0, 			0,
-			0, 			0, 			0, 			0, 			0,
-			0, 			5, 			0, 			0, 			0,
-			0, 			0, 			0, 			1, 			0,
-			0, 			2, 			0, 			3, 			0,
-			0, 			0, 			4, 			0, 			0,
-			0, 			0, 			0, 			6
+			0, 			0, 			26, 			26, 			26,
+			26, 			0, 			21, 			22, 			8,
+			6, 			7, 			9, 			26, 			14,
+			10, 			13, 			25, 			19, 			20,
+			25, 			25, 			25, 			25, 			25,
+			25, 			17, 			18, 			25, 			25,
+			25, 			25, 			25, 			23, 			25,
+			25, 			25, 			25, 			5, 			1,
+			25, 			3, 			25, 			25, 			25,
+			25, 			4, 			25, 			25, 			24,
+			25, 			25, 			2, 			15, 			11,
+			16, 			12
 		];
         return Ok(Lexer { chars, pos: 0, accepts });
     }
@@ -55,143 +79,456 @@ impl Lexer {
 					'\n' => 3,
 					'\r' => 4,
 					' ' => 5,
-					'e' => 6,
-					'h' => 7,
-					'j' => 8,
-					'm' => 9,
-					's' => 10,
-					't' => 11,
+					'!' => 6,
+					'(' => 7,
+					')' => 8,
+					'*' => 9,
+					'+' => 10,
+					'-' => 11,
+					'/' => 12,
+					'0'..='9' => 13,
+					'<' => 14,
+					'=' => 15,
+					'>' => 16,
+					'A'..='Z' => 17,
+					'[' => 18,
+					']' => 19,
+					'a'..='d' => 20,
+					'e' => 21,
+					'f' => 22,
+					'g' | 'h' => 20,
+					'i' => 23,
+					'j'..='r' => 20,
+					's' => 24,
+					't' => 25,
+					'u'..='z' => 20,
+					'{' => 26,
+					'}' => 27,
 					_ => 1
 				},
 				1 => break,
-				2 => { self.pos -= 1; state = 0; continue; },
-				3 => { self.pos -= 1; state = 0; continue; },
-				4 => { self.pos -= 1; state = 0; continue; },
-				5 => { self.pos -= 1; state = 0; continue; },
+				2 => match c {
+					'\t' => 2,
+					'\n' => 3,
+					'\r' => 4,
+					' ' => 5,
+					'!' => 6,
+					'(' => 7,
+					')' => 8,
+					'*' => 9,
+					'+' => 10,
+					'-' => 11,
+					'/' => 12,
+					'0'..='9' => 13,
+					'<' => 14,
+					'=' => 15,
+					'>' => 16,
+					'A'..='Z' => 17,
+					'[' => 18,
+					']' => 19,
+					'a'..='d' => 20,
+					'e' => 21,
+					'f' => 22,
+					'g' | 'h' => 20,
+					'i' => 23,
+					'j'..='r' => 20,
+					's' => 24,
+					't' => 25,
+					'u'..='z' => 20,
+					'{' => 26,
+					'}' => 27,
+					_ => 1
+				},
+				3 => match c {
+					'\t' => 2,
+					'\n' => 3,
+					'\r' => 4,
+					' ' => 5,
+					'!' => 6,
+					'(' => 7,
+					')' => 8,
+					'*' => 9,
+					'+' => 10,
+					'-' => 11,
+					'/' => 12,
+					'0'..='9' => 13,
+					'<' => 14,
+					'=' => 15,
+					'>' => 16,
+					'A'..='Z' => 17,
+					'[' => 18,
+					']' => 19,
+					'a'..='d' => 20,
+					'e' => 21,
+					'f' => 22,
+					'g' | 'h' => 20,
+					'i' => 23,
+					'j'..='r' => 20,
+					's' => 24,
+					't' => 25,
+					'u'..='z' => 20,
+					'{' => 26,
+					'}' => 27,
+					_ => 1
+				},
+				4 => match c {
+					'\t' => 2,
+					'\n' => 3,
+					'\r' => 4,
+					' ' => 5,
+					'!' => 6,
+					'(' => 7,
+					')' => 8,
+					'*' => 9,
+					'+' => 10,
+					'-' => 11,
+					'/' => 12,
+					'0'..='9' => 13,
+					'<' => 14,
+					'=' => 15,
+					'>' => 16,
+					'A'..='Z' => 17,
+					'[' => 18,
+					']' => 19,
+					'a'..='d' => 20,
+					'e' => 21,
+					'f' => 22,
+					'g' | 'h' => 20,
+					'i' => 23,
+					'j'..='r' => 20,
+					's' => 24,
+					't' => 25,
+					'u'..='z' => 20,
+					'{' => 26,
+					'}' => 27,
+					_ => 1
+				},
+				5 => match c {
+					'\t' => 2,
+					'\n' => 3,
+					'\r' => 4,
+					' ' => 5,
+					'!' => 6,
+					'(' => 7,
+					')' => 8,
+					'*' => 9,
+					'+' => 10,
+					'-' => 11,
+					'/' => 12,
+					'0'..='9' => 13,
+					'<' => 14,
+					'=' => 15,
+					'>' => 16,
+					'A'..='Z' => 17,
+					'[' => 18,
+					']' => 19,
+					'a'..='d' => 20,
+					'e' => 21,
+					'f' => 22,
+					'g' | 'h' => 20,
+					'i' => 23,
+					'j'..='r' => 20,
+					's' => 24,
+					't' => 25,
+					'u'..='z' => 20,
+					'{' => 26,
+					'}' => 27,
+					_ => 1
+				},
 				6 => match c {
-					'x' => 33,
+					'=' => 56,
 					_ => 1
 				},
 				7 => match c {
-					'a' => 29,
 					_ => 1
 				},
 				8 => match c {
-					'o' => 27,
 					_ => 1
 				},
 				9 => match c {
-					'o' => 24,
 					_ => 1
 				},
 				10 => match c {
-					'u' => 17,
 					_ => 1
 				},
 				11 => match c {
-					'r' => 12,
 					_ => 1
 				},
 				12 => match c {
-					'a' => 13,
 					_ => 1
 				},
 				13 => match c {
-					'v' => 14,
+					'0'..='9' => 13,
 					_ => 1
 				},
 				14 => match c {
-					'e' => 15,
+					'=' => 55,
 					_ => 1
 				},
 				15 => match c {
-					'l' => 16,
+					'=' => 54,
 					_ => 1
 				},
 				16 => match c {
+					'=' => 53,
 					_ => 1
 				},
 				17 => match c {
-					'n' => 18,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
 					_ => 1
 				},
 				18 => match c {
-					's' => 19,
 					_ => 1
 				},
 				19 => match c {
-					'h' => 20,
 					_ => 1
 				},
 				20 => match c {
-					'i' => 21,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
 					_ => 1
 				},
 				21 => match c {
-					'n' => 22,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='k' => 30,
+					'l' => 50,
+					'm'..='z' => 30,
 					_ => 1
 				},
 				22 => match c {
-					'e' => 23,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a' => 42,
+					'b'..='k' => 30,
+					'l' => 43,
+					'm'..='z' => 30,
 					_ => 1
 				},
 				23 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='e' => 30,
+					'f' => 39,
+					'g'..='m' => 30,
+					'n' => 40,
+					'o'..='z' => 30,
 					_ => 1
 				},
 				24 => match c {
-					'o' => 25,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='s' => 30,
+					't' => 34,
+					'u'..='z' => 30,
 					_ => 1
 				},
 				25 => match c {
-					'n' => 26,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='q' => 30,
+					'r' => 31,
+					's'..='z' => 30,
 					_ => 1
 				},
 				26 => match c {
 					_ => 1
 				},
 				27 => match c {
-					'y' => 28,
 					_ => 1
 				},
 				28 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
 					_ => 1
 				},
 				29 => match c {
-					'p' => 30,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
 					_ => 1
 				},
 				30 => match c {
-					'p' => 31,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
 					_ => 1
 				},
 				31 => match c {
-					'y' => 32,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='t' => 30,
+					'u' => 32,
+					'v'..='z' => 30,
 					_ => 1
 				},
 				32 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='d' => 30,
+					'e' => 33,
+					'f'..='z' => 30,
 					_ => 1
 				},
 				33 => match c {
-					'p' => 34,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
 					_ => 1
 				},
 				34 => match c {
-					'l' => 35,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='q' => 30,
+					'r' => 35,
+					's'..='z' => 30,
 					_ => 1
 				},
 				35 => match c {
-					'o' => 36,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='h' => 30,
+					'i' => 36,
+					'j'..='z' => 30,
 					_ => 1
 				},
 				36 => match c {
-					'r' => 37,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='m' => 30,
+					'n' => 37,
+					'o'..='z' => 30,
 					_ => 1
 				},
 				37 => match c {
-					'e' => 38,
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='f' => 30,
+					'g' => 38,
+					'h'..='z' => 30,
 					_ => 1
 				},
 				38 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
+					_ => 1
+				},
+				39 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
+					_ => 1
+				},
+				40 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='s' => 30,
+					't' => 41,
+					'u'..='z' => 30,
+					_ => 1
+				},
+				41 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
+					_ => 1
+				},
+				42 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='k' => 30,
+					'l' => 47,
+					'm'..='z' => 30,
+					_ => 1
+				},
+				43 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='n' => 30,
+					'o' => 44,
+					'p'..='z' => 30,
+					_ => 1
+				},
+				44 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a' => 45,
+					'b'..='z' => 30,
+					_ => 1
+				},
+				45 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='s' => 30,
+					't' => 46,
+					'u'..='z' => 30,
+					_ => 1
+				},
+				46 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
+					_ => 1
+				},
+				47 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='r' => 30,
+					's' => 48,
+					't'..='z' => 30,
+					_ => 1
+				},
+				48 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='d' => 30,
+					'e' => 49,
+					'f'..='z' => 30,
+					_ => 1
+				},
+				49 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
+					_ => 1
+				},
+				50 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='r' => 30,
+					's' => 51,
+					't'..='z' => 30,
+					_ => 1
+				},
+				51 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='d' => 30,
+					'e' => 52,
+					'f'..='z' => 30,
+					_ => 1
+				},
+				52 => match c {
+					'0'..='9' => 28,
+					'A'..='Z' => 29,
+					'a'..='z' => 30,
+					_ => 1
+				},
+				53 => match c {
+					_ => 1
+				},
+				54 => match c {
+					_ => 1
+				},
+				55 => match c {
+					_ => 1
+				},
+				56 => match c {
 					_ => 1
 				},
 				_ => return Err(TokenErr::Err)
@@ -208,12 +545,60 @@ impl Lexer {
 		if stk.len() == 0 { return Err(TokenErr::Err); }
 		let word : String = chars.iter().collect();
 		match stk[stk.len() - 1] {
-			16   => return Ok(TRAVEL(word)),
-			23   => return Ok(SUNSHINE(word)),
-			26   => return Ok(MOON(word)),
-			28   => return Ok(JOY(word)),
-			32   => return Ok(HAPPY(word)),
-			38   => return Ok(EXPLORE(word)),
+			2    => return Ok(NUMBER(word)),
+			3    => return Ok(NUMBER(word)),
+			4    => return Ok(NUMBER(word)),
+			5    => return Ok(NUMBER(word)),
+			7    => return Ok(LPAR(word)),
+			8    => return Ok(RPAR(word)),
+			9    => return Ok(MULTIPLY(word)),
+			10   => return Ok(PLUS(word)),
+			11   => return Ok(MINUS(word)),
+			12   => return Ok(DIVIDE(word)),
+			13   => return Ok(NUMBER(word)),
+			14   => return Ok(LESS_THAN(word)),
+			15   => return Ok(ASSIGN(word)),
+			16   => return Ok(GREATER_THAN(word)),
+			17   => return Ok(IDENT(word)),
+			18   => return Ok(LBRACKET(word)),
+			19   => return Ok(RBRACKET(word)),
+			20   => return Ok(IDENT(word)),
+			21   => return Ok(IDENT(word)),
+			22   => return Ok(IDENT(word)),
+			23   => return Ok(IDENT(word)),
+			24   => return Ok(IDENT(word)),
+			25   => return Ok(IDENT(word)),
+			26   => return Ok(LBRACE(word)),
+			27   => return Ok(RBRACE(word)),
+			28   => return Ok(IDENT(word)),
+			29   => return Ok(IDENT(word)),
+			30   => return Ok(IDENT(word)),
+			31   => return Ok(IDENT(word)),
+			32   => return Ok(IDENT(word)),
+			33   => return Ok(TRUE(word)),
+			34   => return Ok(IDENT(word)),
+			35   => return Ok(IDENT(word)),
+			36   => return Ok(IDENT(word)),
+			37   => return Ok(IDENT(word)),
+			38   => return Ok(STRING(word)),
+			39   => return Ok(IF(word)),
+			40   => return Ok(IDENT(word)),
+			41   => return Ok(INT(word)),
+			42   => return Ok(IDENT(word)),
+			43   => return Ok(IDENT(word)),
+			44   => return Ok(IDENT(word)),
+			45   => return Ok(IDENT(word)),
+			46   => return Ok(FLOAT(word)),
+			47   => return Ok(IDENT(word)),
+			48   => return Ok(IDENT(word)),
+			49   => return Ok(FALSE(word)),
+			50   => return Ok(IDENT(word)),
+			51   => return Ok(IDENT(word)),
+			52   => return Ok(ELSE(word)),
+			53   => return Ok(GREATER_THAN_OR_EQUAL(word)),
+			54   => return Ok(EQUALS(word)),
+			55   => return Ok(LESS_THAN_OR_EQUAL(word)),
+			56   => return Ok(NOT_EQUALS(word)),
 			_    => return Err(TokenErr::Err)
 		}
 	}

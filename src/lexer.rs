@@ -101,27 +101,24 @@ impl TokenGiver for Lexer {
                 '#' => while self.pos < self.chars.len() {
                     if self.nextchar() == '\n' { break }
                 },
-                other => match other {
-                    '\\' => {
-                        if self.pos == (self.chars.len() - 1)
-                            { return Err(TokenErr::InvalidExpr); }
-                        let c = self.nextchar();
-                        match c {
-                            'n'  => return Ok(CHAR('\n')),
-                            't'  => return Ok(CHAR('\t')),
-                            'r'  => return Ok(CHAR('\r')),
-                            '\\' | ']' | '[' | ')' | '(' |
-                            '-' | '*' | ';' | '+' | '"' | '\'' => {
-                                if self.enclosed { return Ok(CHAR(c)); }
-                                else { return Err(TokenErr::InvalidExpr); }
-                            },
-                            _    => return Err(TokenErr::InvalidEscape),
-                        }
+                '\\' => {
+                    if self.pos == (self.chars.len() - 1)
+                        { return Err(TokenErr::InvalidExpr); }
+                    let c = self.nextchar();
+                    match c {
+                        'n'  => return Ok(CHAR('\n')),
+                        't'  => return Ok(CHAR('\t')),
+                        'r'  => return Ok(CHAR('\r')),
+                        '\\' | ']' | '[' | ')' | '(' | '{' | '}' |
+                        '-' | '*' | ';' | '+' | '"' | '\'' => {
+                            if self.enclosed { return Ok(CHAR(c)); }
+                            else { return Err(TokenErr::InvalidExpr); }
+                        },
+                        _    => {println!("hey: {}", c); return Err(TokenErr::InvalidEscape)},
                     }
-                    ' ' => if self.enclosed { return Ok(CHAR(' ')); },
-                    '\n' | '\r' => return Err(TokenErr::InvalidExpr),
-                    _ => return Ok(CHAR(other))
                 }
+                ' ' => if self.enclosed { return Ok(CHAR(' ')); },
+                c => return Ok(CHAR(c))
             }
         }
     }
