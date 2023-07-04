@@ -3,6 +3,7 @@ name = "rflex"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+description = "A compiler that generates a Lexer using DFAs (inspired by flex)"
 
 [lib]
 name = "rflex_lib"
