@@ -1,7 +1,8 @@
 [package]
-name = "compiler"
+name = "rflex"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 [lib]
 name = "rflex_lib"
