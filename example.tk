@@ -1,33 +1,58 @@
-"if"                          IF;
-"else"                        ELSE;
-"int"                         INT;
-"float"                       FLOAT;
-"string"                      STRING;
+# Operators
+"="                             ASSIGN;
+"\+"                            PLUS;
+"\-"                            MINUS;
+"\*"                            TIMES;
+"@"                             DEREF;
+"&"                             ADDRESS;
+"/"                             SLASH;
+"^"                             XOR;
+"\|"                            OR_BIT;
+"&"                             AND_BIT;
+"or"                            OR;
+"and"                           AND;
+"."                             PERIOD;
 
-"\+"                          PLUS;
-"\-"                          MINUS;
-"\*"                          MULTIPLY;
-"/"                           DIVIDE;
+# Groups
+"\("                            LPAREN;
+"\)"                            RPAREN;
+"\["                            LBRAC;
+"\]"                            RBRAC;
+"\{"                            LCURL;
+"\}"                            RCURL;
 
-"="                           ASSIGN;
-"=="                          EQUALS;
-"!="                          NOT_EQUALS;
-">"                           GREATER_THAN;
-"<"                           LESS_THAN;
-">="                          GREATER_THAN_OR_EQUAL;
-"<="                          LESS_THAN_OR_EQUAL;
+# Comparators
+"=="                            EQL;
+"!="                            NEQ;
+"<"                             LSS;
+">"                             GTR;
+"<="                            LEQ;
+">="                            GEQ;
 
-"\{"                          LBRACE;
-"\}"                          RBRACE;
-"\["                          LBRACKET;
-"\]"                          RBRACKET;
-"\("                          LPAR;
-"\)"                          RPAR;
+# Modifiers
+"const"                         CONST;
 
-"true"                        TRUE;
-"false"                       FALSE;
+# Punctuation
+"\;"                            SEMICOLON;
+","                             COMMA;
 
-"[a-zA-Z][a-zA-Z0-9]*"        IDENT;
-"[0-9]*"                      NUMBER;
+# Control Flow
+"while"                         WHILE;
+"for"                           FOR;
+"break"                         BREAK;
+"continue"                      CONTINUE;
+"if"                            IF;
+"else if"                       ELSE_IF;
+"else"                          ELSE;
 
-"[ \n\r\t]"                   ;
+# Functions
+"\->"                            YIELDS;
+"\(\)"                            NONE;
+"fn"                            FUNCTION;
+
+# Low-Level Constructs.
+"[a-zA-Z][a-zA-Z0-9]*"          IDENT;
+"\-?[0-9]*"                     INTEGER;
+"[0-9]*.[0-9]+"                 FLOAT;
+"'[a-zA-Z]'"                    CHAR;    # A limitation of the lexer. Will add \c eventually.
+"[ \t\n\r]"                     ;

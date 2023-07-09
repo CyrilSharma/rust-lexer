@@ -55,14 +55,17 @@ impl<'a> Generator<'a> {
         self.writeln("}")?;
         self.writeln("#[derive(Debug, PartialEq, Eq)]")?;
         self.write_vec(&[
-            "pub enum TokenErr {",
-            "   Err",
+            "pub struct TokenErr {",
+            "   pub error: String",
             "}"
         ])?;
         self.write_vec(&[
             "pub struct Lexer {",
             "  chars:   Vec<char>,",
             "  pos:     usize,",
+            "  begins:  Vec<usize>,",
+            "  tabs:    Vec<usize>,",
+            "  column:  usize,",
             &format!("  accepts: [usize; {}]", self.dfa.ncount),
             "}",
             "impl Lexer {",
@@ -71,13 +74,46 @@ impl<'a> Generator<'a> {
             "            .chars()",
             "            .collect();",
             &self.gen_accepts(),
-            "        return Ok(Lexer { chars, pos: 0, accepts });",
+            "        return Ok(Lexer { ",
+            "           chars,",
+            "           pos: 0,",
+            "           begins: vec![0; 1],",
+            "           tabs:   Vec::new(),",
+            "           column: 0,",
+            "           accepts",
+            "        });",
             "    }",
             "",
-            "    fn nextchar(&mut self) -> char {",
-            "        self.pos += 1;",
-            "        return self.chars[self.pos - 1];",
-            "    }",
+            "   fn advance(&mut self) -> char {",
+            "       let c = self.chars[self.pos];",
+            "        match c {",
+            "           '\\n' => {",
+            "               self.column = 0;",
+            "               self.begins.push(self.pos + 1);",
+            "           },",
+            "           '\\t' => {",
+            "               self.tabs.push(self.column);",
+            "               self.column += 4 - (self.column % 4);",
+            "           }",
+            "           _ => self.column += 1",
+            "       }",
+            "       self.pos += 1;",
+            "       return c;",
+            "   }",
+            "   fn retract(&mut self) {",
+            "       self.pos -= 1;",
+            "       let c = self.chars[self.pos];",
+            "       match c {",
+            "           '\\n' => {",
+            "               self.begins.pop();",
+            "               self.column = self.pos - self.begins[self.begins.len() - 1];",
+            "           }",
+            "           '\\t' => {",
+            "               self.column = self.tabs.pop().unwrap();",
+            "           }",
+            "           _ => self.column -= 1",
+            "       }",
+            "   }",
         ])?;
         self.indent();
         self.writeln("pub fn next(&mut self) -> Result<Token, TokenErr> {")?;
@@ -100,19 +136,23 @@ impl<'a> Generator<'a> {
         ])?;
         self.indent();
         self.writeln("if self.pos == self.chars.len() { break; }")?;
-        self.writeln("let c = self.nextchar();")?;
+        self.writeln("let c = self.advance();")?;
         self.writeln("state = match state {")?;
         self.indent();
         for state in 0..self.dfa.ncount {
             if state == self.dfa.dead {
-                self.writeln(&format!(
-                    "{} => break,", self.dfa.dead
-                ))?;
+                self.write_vec(&[
+                    &format!("{} => {{", self.dfa.dead),
+                    "\tstk.push(state);",
+			        "\tchars.push(c);",
+                    "\tbreak;",
+                    "}"
+                ])?;
             } else {
                 self.write_transitions(state)?;
             }
         }
-        self.writeln("_ => return Err(TokenErr::Err)")?;
+        self.writeln("_ => panic!(\"Invalid State!\")")?;
         self.unindent();
         self.writeln("};")?;
         self.writeln("stk.push(state);")?;
@@ -124,25 +164,32 @@ impl<'a> Generator<'a> {
             "   self.accepts[stk[stk.len() - 1]] == 0 {",
             "   stk.pop().unwrap();",
             "   chars.pop().unwrap();",
-            "   self.pos -= 1;",
+            "   self.retract();",
             "}",
-            "if stk.len() == 0 { return Err(TokenErr::Err); }"
+            "if stk.len() == 0 {",
+            "    let start = self.begins[self.begins.len() - 1];",
+            "    let error_line: String = self.chars[start..]",
+            "        .iter()",
+            "        .take_while(|&&c| c != '\\n')",
+            "        .collect();",
+            "    return Err(TokenErr{error: format!(",
+            "        \"Failed to lex from: \\n{}\\n{}^\",",
+            "        error_line,",
+            "        \" \".repeat(self.column)",
+            "    )});",
+            "}"
         ])?;
         self.writeln("let word : String = chars.iter().collect();")?;
-        self.writeln("match stk[stk.len() - 1] {")?;
+        self.writeln("match self.accepts[stk[stk.len() - 1]] {")?;
         self.indent();
-        for idx in 0..self.dfa.accepts.len() {
-            let acc = self.dfa.accepts[idx];
-            if acc == 0 || 
-                self.dfa.labels[acc - 1].len() == 0 {
-                continue;
-            }
+        for (idx, label) in self.dfa.labels.iter().enumerate() {
+            if label.len() == 0 { continue; }
             self.writeln(&format!(
                 "{:<4} => return Ok({}(word)),",
-                idx, self.dfa.labels[acc - 1],
+                idx + 1, self.dfa.labels[idx],
             ))?;
         }
-        self.writeln("_    => return Err(TokenErr::Err)")?;
+        self.writeln("_    => panic!(\"Invalid Accepting State\")")?;
         self.unindent();
         self.writeln("}")?;
         return Ok(());

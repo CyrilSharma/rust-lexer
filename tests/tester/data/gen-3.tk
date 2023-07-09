@@ -30,4 +30,5 @@
 "[a-zA-Z][a-zA-Z0-9]*"        IDENT;
 "[0-9]*"                      NUMBER;
 
+"\;"                           SEMI;
 "[ \n\r\t]"                   ;

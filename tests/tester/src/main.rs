@@ -19,7 +19,7 @@ fn main() {
             }
         },
         Err(tk) => {
-            eprintln!("{:?}", tk);
+            eprintln!("{}", tk.error);
             std::process::exit(1)
         }
     }}
