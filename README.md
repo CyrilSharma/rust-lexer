@@ -6,4 +6,4 @@ Much of the design was based on the textbook: Compilers, Principles, Designs and
 
 # TODO
 Make generator break when it encounters the dead state.
-Make generator handle variable types! It's really annoying otherwise.
+Make generator handle variable types!
